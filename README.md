@@ -29,6 +29,7 @@ The quickstart
   * installs OSSM3 (Istio CR) with Kiali and OSSMC to `istio-system` namespace
   * installs IstioCNI to `istio-cni` namespace
   * installs Istio ingress gateway to `istio-ingress` namespace
+  * installs Gateway API ingress gateway to `istio-ingress` namespace
   * installs bookinfo app with traffic generator in `bookinfo` namespace
   * installs RestAPI app in `rest-api-with-mesh` namespace
 
