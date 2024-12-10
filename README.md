@@ -1,12 +1,24 @@
 # ossm-3-demo
-OpenShift Service Mesh 3 Demo/Quckstart
+OpenShift Service Mesh 3 Demo/Quckstart with Gateway API for ingress.
+
+## For Red Hatters
+Use the following demo:
+[AWS with OpenShift Open Environment](https://catalog.demo.redhat.com/catalog?item=babylon-catalog-prod/sandboxes-gpte.sandbox-ocp.prod)
+
+Minimal OCP config:
+- Control Plane Count: `1`
+- Control Plane Instance Type: `m6a.4xlarge`
+
 
 # Quickstart: OSSM3 with Kiali, Tempo, Bookinfo
-This quickstart guide provides step-by-step instructions on how to set up OSSM3 with Kiali, Tempo, Open Telemetry, and Bookinfo app.
+This quickstart guide provides step-by-step instructions on how to set up OSSM3 with Kiali, Tempo, Open Telemetry, and Bookinfo app. It also includes an example of using the next generation of ingress with the Kuberntetes Gateway API to access an example RestAPI.  
+  
 By the end of this quickstart, you will have installed OSSM3, where tracing information is collected by Open Telemetry Collector and Tempo, and monitoring is managed by an in-cluster monitoring stack. The Bookinfo sample application will be included in the service mesh, with a traffic generator sending one request per second to simualte traffic. Additionally, the Kiali UI and OSSMC plugin will be set up to provide a graphical overview.
 
+***Note: Bookinfo uses the istio gateway for ingress. The RestAPI uses Kubernetes Gateway API for ingress***
+
 ## Prerequisites
-- The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install it by `./installOperators.sh` script which installs the particular operator versions (see subscriptions.yaml))
+- The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install it by `./install_operators.sh` script which installs the particular operator versions (see subscriptions.yaml))
 - The cluster that has available Persistent Volumes or supports dynamic provisioning storage (for installing MiniO)
 - You are logged into OpenShift via the CLI
 
@@ -18,6 +30,7 @@ The quickstart
   * installs IstioCNI to `istio-cni` namespace
   * installs Istio ingress gateway to `istio-ingress` namespace
   * installs bookinfo app with traffic generator in `bookinfo` namespace
+  * installs RestAPI app in `rest-api-with-mesh` namespace
 
 ## Shortcut to the end
 To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ossm3_demo.sh` script which will perform all steps automatically.
@@ -25,9 +38,15 @@ To skip all the following steps and set everything up automatically (e.g., for d
 ## Steps
 All required YAML resources are in the `./resources` folder.
 For a more detailed description about what is set and why, see OpenShift Service Mesh documentation.
+  
+Enable Gateway API  
+------------  
+```bash
+oc get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { oc kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | oc apply -f -; }
+```
 
-Set up Tempo and OpenTelemetryCollector
-------------
+Set up Tempo and OpenTelemetryCollector  
+------------  
 ```bash
 oc new-project tracing-system
 ```
@@ -82,7 +101,7 @@ oc apply -f ./resources/OSSM3/istioCni.yaml -n istio-cni
 oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 ```
 
-Set up the ingress gateway in a different namespace as istio-system.
+Set up the ingress gateway via istio in a different namespace as istio-system.
 Add that namespace as a member of the mesh.
 ```bash
 oc new-project istio-ingress
@@ -93,6 +112,10 @@ oc wait --for condition=Available deployment/istio-ingressgateway --timeout 60s 
 Expose Istio ingress route which will be used in the bookinfo traffic generator later (and via that URL, we will be accessing to the bookinfo app)
 ```bash
 oc expose svc istio-ingressgateway --port=http2 --name=istio-ingressgateway -n istio-ingress
+```
+Set up the ingress gateway via Gateway API (this will live next to the previously created gateway in the same namespace)
+```bash
+oc apply -k ./resources/gateway
 ```
 
 Set up OCP user monitoring workflow
@@ -158,15 +181,33 @@ export INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonp
 cat ./resources/Bookinfo/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f - 
 oc apply -f ./resources/Bookinfo/traffic-generator.yaml -n bookinfo
 ```
+  
+Set up sample RestAPI    
+------------  
+
+Install the sample RestAPI `hello-service` via Kustomize
+```bash
+oc apply -k ./resources/application/kustomize/overlays/pod 
+```
 
 Test that everything works correctly
 ------------
-Now, everything should be set.
+Now, everything should be set.  
+
 Check the Bookinfo app via the ingress route
 ```bash
 INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
 echo "http://${INGRESSHOST}/productpage"
 ```
+  
+Check the RestAPI
+```bash
+export GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
+
+curl -s $GATEWAY/hello | jq
+curl -s $GATEWAY/hello-service | jq
+```
+
 Check Kiali UI
 ```bash
 KIALI_HOST=$(oc get route kiali -n istio-system -o=jsonpath='{.spec.host}')
@@ -180,6 +221,7 @@ oc get pods -n istio-system
 oc get pods -n istio-cni
 oc get pods -n istio-ingress
 oc get pods -n bookinfo
+oc get pods -n rest-api-with-mesh    
 ```
 Output (the number of istio-cni pods is equals to the number of OCP nodes):
 ```bash
@@ -190,21 +232,27 @@ tempo-sample-distributor-7dbbf4b5d7-xw5w5      1/1     Running   0          10m
 tempo-sample-ingester-0                        1/1     Running   0          10m
 tempo-sample-querier-7bbcc6dd9b-gtl4q          1/1     Running   0          10m
 tempo-sample-query-frontend-5885fff6bf-cklc5   2/2     Running   0          10m
+
 NAME                              READY   STATUS    RESTARTS   AGE
 otel-collector-77b6b4b58d-dwk6q   1/1     Running   0          9m23s
+
 NAME                           READY   STATUS    RESTARTS   AGE
 istiod-6847b886d5-s8vz8        1/1     Running   0          9m8s
 kiali-6b7dbdf67b-cczm5         1/1     Running   0          7m56s
 ossmconsole-7b64979c75-f9fbf   1/1     Running   0          7m22s
+
 NAME                   READY   STATUS    RESTARTS   AGE
 istio-cni-node-8h4mr   1/1     Running   0          8m44s
 istio-cni-node-qvmw4   1/1     Running   0          8m44s
 istio-cni-node-vpv9v   1/1     Running   0          8m44s
 istio-cni-node-wml9b   1/1     Running   0          8m44s
 istio-cni-node-x8np2   1/1     Running   0          8m44s
+
 NAME                                    READY   STATUS    RESTARTS   AGE
-istio-ingressgateway-7f8878b6b4-6k8tj   1/1     Running   0          8m19s
-istio-ingressgateway-7f8878b6b4-f5744   1/1     Running   0          8m36s
+hello-gateway-istio-8449867f56-zsqk5    1/1     Running   0          33m
+istio-ingressgateway-7f8878b6b4-bq64q   1/1     Running   0          32m
+istio-ingressgateway-7f8878b6b4-d7m5p   1/1     Running   0          33m
+
 NAME                             READY   STATUS    RESTARTS   AGE
 details-v1-65cfcf56f9-72k5p      2/2     Running   0          3m4s
 kiali-traffic-generator-cblht    2/2     Running   0          77s
@@ -213,4 +261,9 @@ ratings-v1-7c9bd4b87f-5qmmp      2/2     Running   0          3m3s
 reviews-v1-6584ddcf65-mhd75      2/2     Running   0          3m2s
 reviews-v2-6f85cb9b7c-q8mc2      2/2     Running   0          3m2s
 reviews-v3-6f5b775685-ctb65      2/2     Running   0          3m1s
+
+NAME                            READY   STATUS    RESTARTS   AGE
+service-b-v1-6c8c645587-krn87   2/2     Running   0          31m
+service-b-v2-68f956ddc6-v62jf   2/2     Running   0          31m
+web-front-end-9446fc49d-t8zh7   2/2     Running   0          31m
 ```
