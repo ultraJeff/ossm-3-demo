@@ -12,9 +12,6 @@ BBlue='\033[1;34m'    # Blue
 
 echo "${BGreen}This script set up the whole OSSM3 demo.${NC}"
 
-echo "${BYellow}Enabling Gateway API${NC}"
-oc get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { oc kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | oc apply -f -; }
-
 echo "${BYellow}Installing Minio for Tempo${NC}"
 oc new-project tracing-system
 oc apply -f ./resources/TempoOtel/minio.yaml -n tracing-system

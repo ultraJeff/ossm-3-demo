@@ -19,6 +19,7 @@ By the end of this quickstart, you will have installed OSSM3, where tracing info
 
 ## Prerequisites
 - The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install it by `./install_operators.sh` script which installs the particular operator versions (see subscriptions.yaml))
+- The above listed script also enables the `Gateway API`, which will be included with OCP in a future release (TBD)
 - The cluster that has available Persistent Volumes or supports dynamic provisioning storage (for installing MiniO)
 - You are logged into OpenShift via the CLI
 
@@ -40,7 +41,7 @@ To skip all the following steps and set everything up automatically (e.g., for d
 All required YAML resources are in the `./resources` folder.
 For a more detailed description about what is set and why, see OpenShift Service Mesh documentation.
   
-Enable Gateway API  
+Enable Gateway API  (only if you did not run the `./install_operators.sh` script)
 ------------  
 ```bash
 oc get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { oc kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | oc apply -f -; }
