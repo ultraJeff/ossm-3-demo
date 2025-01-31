@@ -7,7 +7,7 @@ Use the following demo:
 
 Minimal OCP config:
 - Control Plane Count: `1`
-- Control Plane Instance Type: `m6a.4xlarge` (resources to handle OSSM overhead)
+- Control Plane Instance Type: `m6a.4xlarge` (resources to handle OSSM and observability overhead)
 
 
 # Quickstart: OSSM3 with Kiali, Tempo, Bookinfo
