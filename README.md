@@ -7,10 +7,13 @@ Use the following demo:
 
 Minimal OCP config:
 - Control Plane Count: `1`
-- Control Plane Instance Type: `m6a.4xlarge`
+- Control Plane Instance Type: `m6a.4xlarge` (resources to handle OSSM and observability overhead)
 
 
 # Quickstart: OSSM3 with Kiali, Tempo, Bookinfo
+- Based off of https://github.com/mkralik3/sail-operator/tree/quickstart/docs/ossm/quickstarts/ossm3-kiali-tempo-bookinfo
+  
+  
 This quickstart guide provides step-by-step instructions on how to set up OSSM3 with Kiali, Tempo, Open Telemetry, and Bookinfo app. It also includes an example of using the next generation of ingress with the Kuberntetes Gateway API to access an example RestAPI.  
   
 By the end of this quickstart, you will have installed OSSM3, where tracing information is collected by Open Telemetry Collector and Tempo, and monitoring is managed by an in-cluster monitoring stack. The Bookinfo sample application will be included in the service mesh, with a traffic generator sending one request per second to simualte traffic. Additionally, the Kiali UI and OSSMC plugin will be set up to provide a graphical overview.
