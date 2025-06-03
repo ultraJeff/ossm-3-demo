@@ -35,7 +35,7 @@ spec:
         type: bearer
         use_kiali_token: true
       query_scope:
-        mesh_id: ossm
+        mesh_id: ossm-3
       thanos_proxy:
         enabled: true
       url: 'https://thanos-querier.openshift-monitoring.svc.cluster.local:9091'
