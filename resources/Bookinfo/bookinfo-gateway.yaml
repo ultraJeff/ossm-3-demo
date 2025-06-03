@@ -1,6 +1,8 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
+  labels: 
+    version: v1
   name: bookinfo-gateway
 spec:
   # The selector matches the ingress gateway pod labels.
@@ -18,6 +20,8 @@ spec:
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
+  labels:
+    version: v1
   name: bookinfo
 spec:
   hosts:
