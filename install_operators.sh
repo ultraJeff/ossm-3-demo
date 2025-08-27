@@ -10,18 +10,18 @@ BBlue='\033[1;34m'    # Blue
 #BCyan='\033[1;36m'   # Cyan
 #BWhite='\033[1;37m'  # White
 
-echo "${BGreen}This script installs operators from OperatorHub${NC}"
-echo "${BGreen}This script will also enable the Kubernetes Gateway API${NC}" #This may be an unessessary step in future OCP
+echo "This script installs operators from OperatorHub"
+echo "This script will also enable the Kubernetes Gateway API" #This may be an unessessary step in future OCP
 
 oc apply -f ./resources/subscriptions.yaml
-echo "${BYellow}Waiting till all operators pods are ready${NC}"
+echo "Waiting till all operators pods are ready"
 until oc get pods -n openshift-operators | grep servicemesh-operator3 | grep Running; do echo "Waiting for servicemesh-operator3 to be running."; sleep 10;done
 until oc get pods -n openshift-operators | grep kiali-operator | grep Running; do echo "Waiting for kiali-operator to be running."; sleep 10;done
 until oc get pods -n openshift-operators | grep opentelemetry-operator | grep Running; do echo "Waiting for opentelemetry-operator to be running."; sleep 10;done
 until oc get pods -n openshift-operators | grep tempo-operator | grep Running; do echo "Waiting for tempo-operator to be running."; sleep 10;done
 
-echo "${BGreen}All operators were installed successfully${NC}"
+echo "All operators were installed successfully"
 oc get pods -n openshift-operators
 
-echo "${BYellow}Enabling Gateway API${NC}"
+echo "Enabling Gateway API"
 oc get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { oc kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | oc apply -f -; }
