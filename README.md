@@ -1,5 +1,5 @@
 # ossm-3-demo
-OpenShift Service Mesh 3 Demo/Quckstart with Gateway API for ingress.
+OpenShift Service Mesh 3 Demo/Quickstart with Gateway API for ingress, supporting both traditional sidecar and ambient modes.
 
 ## For Red Hatters
 Use the following demo:
@@ -18,7 +18,10 @@ This quickstart guide provides step-by-step instructions on how to set up OSSM3 
   
 By the end of this quickstart, you will have installed OSSM3, where tracing information is collected by Open Telemetry Collector and Tempo, and monitoring is managed by an in-cluster monitoring stack. The Bookinfo sample application will be included in the service mesh, with a traffic generator sending one request per second to simualte traffic. Additionally, the Kiali UI and OSSMC plugin will be set up to provide a graphical overview.
 
-***Note: Bookinfo uses the istio gateway for ingress. The RestAPI uses Kubernetes Gateway API for ingress***
+> [!NOTE]
+> The RestAPI uses Kubernetes Gateway API for ingress (Service Mesh 3 Sidecar)
+> 
+> The Bookinfo app has three different modes that let you choose between Service Mesh 2.x, Service Mesh 3 Sidecar or Service Mesh 3 Ambient mode deployments
 
 ## Prerequisites
 - The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install it by `./install_operators.sh` script which installs the particular operator versions (see subscriptions.yaml))
@@ -36,9 +39,23 @@ The quickstart
   * installs Gateway API ingress gateway to `istio-ingress` namespace
   * installs bookinfo app with traffic generator in `bookinfo` namespace
   * installs RestAPI app in `rest-api-with-mesh` namespace
+  * (For ambient mode) installs ztunnel to `ztunnel` namespace
+
+## OSSM3 Configuration Structure
+The OSSM3 configurations are organized using Kustomize overlays:
+- `resources/ossm3/base/` - Common resources (ingress gateway)
+- `resources/ossm3/overlays/traditional/` - Traditional sidecar mode configuration
+- `resources/ossm3/overlays/ambient/` - Ambient mode configuration with ztunnel
 
 ## Shortcut to the end
 To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ossm3_demo.sh` script which will perform all steps automatically.
+
+## Full Infrastructure Setup
+To set up the complete OSSM3 infrastructure (operators, observability, etc.), run:
+```bash
+./install_operators.sh
+./install_ossm3_demo.sh
+```
 
 ## Steps
 All required YAML resources are in the `./resources` folder.
@@ -79,15 +96,32 @@ oc wait --for condition=Available deployment/otel-collector --timeout 60s -n ope
 
 Set up OSSM3
 ------------
+First, create the required namespaces:
 ```bash
 oc new-project istio-system
+oc new-project istio-cni
+oc new-project istio-ingress
 ```
-First, install Istio custom resource
-> **_NOTE:_**  In this example, the `.spec.version` is missing so the istio version is automatically set by OSSM operator. You can specify the version manually, but it must be one that is supported by the operator; otherwise, a validation error will occur.
+
+### Traditional Sidecar Mode (Default)
+For traditional sidecar injection mode, use the Kustomize overlay:
 ```bash
-oc apply -f ./resources/OSSM3/istiocr.yaml  -n istio-system
+oc apply -k ./resources/ossm3/overlays/traditional
 oc wait --for condition=Ready istio/default --timeout 60s  -n istio-system
+oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 ```
+
+### Ambient Mode (Alternative)
+For ambient mode without sidecars, use the ambient overlay:
+```bash
+oc apply -k ./resources/ossm3/overlays/ambient
+oc wait --for condition=Ready istio/default --timeout 60s  -n istio-system
+oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
+oc wait --for condition=Ready ztunnel/default --timeout 60s -n ztunnel
+```
+
+> **_NOTE:_**  The `.spec.version` is missing so the istio version is automatically set by OSSM operator. You can specify the version manually, but it must be one that is supported by the operator.
+
 Then, set up Telemetry resource to enable tracers defined in Istio custom resource
 ```bash
 oc apply -f ./resources/TempoOtel/istioTelemetry.yaml  -n istio-system
@@ -98,22 +132,13 @@ oc label namespace opentelemetrycollector istio-injection=enabled
 ```
 > **_NOTE:_** `istio-injection=enabled` label works only when the name of Istio CR is `default`. If you use a different name as `default`, you need to use `istio.io/rev=<istioCR_NAME>` label instead of `istio-injection=enabled` in the all next steps of this example. Also, you will need to update values `config_map_name`, `istio_sidecar_injector_config_map_name`, `istiod_deployment_name`, `url_service_version` in the Kiali CR.
 
-Then, install IstioCNI
-> **_NOTE:_**  In this example, the `.spec.version` is missing so the istio version is automatically set by OSSM operator. the `.spec.version` is missing so the istio version is automatically set by OSSM operator. You can specify the version manually, but it must be one that is supported by the operator.
-```bash
-oc new-project istio-cni
-oc apply -f ./resources/OSSM3/istioCni.yaml -n istio-cni
-oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
-```
-
 Set up the ingress gateway via istio in a different namespace as istio-system.
 Add that namespace as a member of the mesh.
 ```bash
-oc new-project istio-ingress
 oc label namespace istio-ingress istio-injection=enabled
-oc apply -f ./resources/OSSM3/istioIngressGateway.yaml  -n istio-ingress
 oc wait --for condition=Available deployment/istio-ingressgateway --timeout 60s -n istio-ingress
 ```
+> **_NOTE:_** The ingress gateway is automatically deployed as part of the OSSM3 Kustomize overlays.
 Expose Istio ingress route which will be used in the bookinfo traffic generator later (and via that URL, we will be accessing to the bookinfo app)
 ```bash
 oc expose svc istio-ingressgateway --port=http2 --name=istio-ingressgateway -n istio-ingress
@@ -162,7 +187,24 @@ oc wait -n istio-system --for=condition=Successful OSSMConsole ossmconsole --tim
 
 Set up BookInfo
 ------------
-Create bookinfo namespace and add that namespace as a member of the mesh
+
+## Quick Start: Choose Your Service Mesh Mode
+
+### Traditional Sidecar Mode (Production Ready)
+```bash
+./deploy-traditional.sh
+```
+
+### Ambient Mode (Next Generation)
+```bash
+./deploy-ambient.sh
+```
+
+### Cleanup
+```bash
+./cleanup-bookinfo.sh
+```
+<!-- Create bookinfo namespace and add that namespace as a member of the mesh
 ```bash
 oc new-project bookinfo
 oc label namespace bookinfo istio-injection=enabled
@@ -185,7 +227,7 @@ Optionally, install a traffic generator for booking app which every second gener
 export INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
 cat ./resources/Bookinfo/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f - 
 oc apply -f ./resources/Bookinfo/traffic-generator.yaml -n bookinfo
-```
+``` -->
   
 Set up sample RestAPI    
 ------------  

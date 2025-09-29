@@ -186,7 +186,7 @@
       kubernetes.core.k8s:
         state: present
         namespace: "{{ namespace_bookinfo }}"
-        definition: "{{ lookup('file', './resources/Bookinfo/bookinfo.yaml') }}"
+        definition: "{{ lookup('file', './resources/bookinfo/base/bookinfo.yaml') }}"
 
     - name: Wait for Bookinfo pods to become ready
       kubernetes.core.k8s_info:

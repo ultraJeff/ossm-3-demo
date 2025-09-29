@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: bookinfo-waypoint
+  namespace: bookinfo
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+---
+# Use waypoint for all services in the namespace
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-waypoint-config
+  namespace: bookinfo
+  labels:
+    istio.io/gateway-name: bookinfo-waypoint
+data:
+  config: |
+    # This waypoint will handle L7 traffic for better observability

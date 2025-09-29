@@ -34,36 +34,28 @@ oc apply -f ./resources/TempoOtel/opentelemetrycollector.yaml -n opentelemetryco
 echo "Waiting for OpenTelemetryCollector deployment to become available..."
 oc wait --for condition=Available deployment/otel-collector --timeout 60s -n opentelemetrycollector
 
-echo "Installing OSSM3..."
+echo "Installing OSSM3 (Traditional Mode)..."
 oc new-project istio-system
-echo "Installing IstioCR..."
-oc apply -f ./resources/OSSM3/istiocr.yaml  -n istio-system
+oc new-project istio-cni
+oc new-project istio-ingress
+echo "Installing OSSM3 Control Plane and CNI..."
+oc apply -k ./resources/ossm3/overlays/traditional
 echo "Waiting for istio to become ready..."
 oc wait --for condition=Ready istio/default --timeout 60s  -n istio-system
+echo "Waiting for istiocni to become ready..."
+oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 
 echo "Installing Telemetry resource..."
 oc apply -f ./resources/TempoOtel/istioTelemetry.yaml  -n istio-system
 echo "Adding OTEL namespace as a part of the mesh"
 oc label namespace opentelemetrycollector istio-injection=enabled
 
-echo "Installing IstioCNI..."
-oc new-project istio-cni
-oc apply -f ./resources/OSSM3/istioCni.yaml -n istio-cni
-echo "Waiting for istiocni to become ready..."
-oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
-
-echo "Creating ingress gateway via Gateway API..."
-oc new-project istio-ingress
+echo "Creating ingress gateways..."
 echo "Adding istio-ingress namespace as a part of the mesh"
 oc label namespace istio-ingress istio-injection=enabled
+echo "Creating Gateway API ingress..."
 oc apply -k ./resources/gateway
-
-echo "Creating ingress gateway via Istio Deployment..."
-#oc new-project istio-ingress
-#echo "Adding istio-ingress namespace as a part of the mesh"
-#oc label namespace istio-ingress istio-injection=enabled
-oc apply -f ./resources/OSSM3/istioIngressGateway.yaml  -n istio-ingress
-echo "Waiting for deployment/istio-ingressgateway to become available..."
+echo "Waiting for Istio ingress gateway deployment to become available..."
 oc wait --for condition=Available deployment/istio-ingressgateway --timeout 60s -n istio-ingress
 echo "Exposing Istio ingress route"
 oc expose svc istio-ingressgateway --port=http2 --name=istio-ingressgateway -n istio-ingress
@@ -94,15 +86,16 @@ oc apply -f ./resources/Kiali/kialiOssmcCr.yaml -n istio-system
 echo "Installing Sample RestAPI..."
 oc apply -k ./resources/application/kustomize/overlays/pod 
 
-echo "Installing Bookinfo..."
-oc new-project bookinfo
-echo "Adding bookinfo namespace as a part of the mesh"
-oc label namespace bookinfo istio-injection=enabled
-echo "Enabling pod monitor in bookinfo namespac"
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n bookinfo
-echo "Installing Bookinfo"
-oc apply -f ./resources/Bookinfo/bookinfo.yaml -n bookinfo
-oc apply -f ./resources/Bookinfo/bookinfo-gateway.yaml -n bookinfo
+echo "Installing Bookinfo (SM3 Sidecar)..."
+oc apply -k ./resources/bookinfo/kustomize/overlays/traditional
+# oc new-project bookinfo
+# echo "Adding bookinfo namespace as a part of the mesh"
+# oc label namespace bookinfo istio-injection=enabled
+# echo "Enabling pod monitor in bookinfo namespac"
+# oc apply -f ./resources/Monitoring/podMonitor.yaml -n bookinfo
+# echo "Installing Bookinfo"
+# oc apply -f ./resources/Bookinfo/bookinfo.yaml -n bookinfo
+# oc apply -f ./resources/Bookinfo/bookinfo-gateway.yaml -n bookinfo
 echo "Waiting for bookinfo pods to become ready..."
 oc wait --for=condition=Ready pods --all -n bookinfo --timeout 60s
 
@@ -110,11 +103,12 @@ echo "Installation finished!"
 echo "NOTE: Kiali will show metrics of bookinfo app right after pod monitor will be ready. You can check it in OCP console Observe->Metrics"
 
 # this env will be used in traffic generator
+# TODO: This is wrong for SM3
 export INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
 KIALI_HOST=$(oc get route kiali -n istio-system -o=jsonpath='{.spec.host}')
 
 echo "[optional] Installing Bookinfo traffic generator..."
-cat ./resources/Bookinfo/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f - 
+cat ./resources/bookinfo/base/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f - 
 oc apply -f ./resources/Bookinfo/traffic-generator.yaml -n bookinfo
 
 echo "===================================================================================================="
