@@ -57,6 +57,11 @@ To set up the complete OSSM3 infrastructure (operators, observability, etc.), ru
 ./install_ossm3_demo.sh
 ```
 
+### For ambient mode manually
+```bash
+oc apply -k resources/ossm3/overlays/ambient
+```
+
 ## Steps
 All required YAML resources are in the `./resources` folder.
 For a more detailed description about what is set and why, see OpenShift Service Mesh documentation.
@@ -200,8 +205,9 @@ Set up BookInfo
 ./deploy-ambient.sh
 ```
 
-### Cleanup
+### To switch between Traditional and Ambient for the the Bookinfo app
 ```bash
+# Run this first and then run one of the deploys above
 ./cleanup-bookinfo.sh
 ```
 <!-- Create bookinfo namespace and add that namespace as a member of the mesh

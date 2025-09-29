@@ -46,7 +46,8 @@ oc get gateway bookinfo-waypoint -n bookinfo  # waypoint for L7 observability
 ### Access Applications
 ```bash
 # Get Bookinfo URL
-BOOKINFO_URL=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
+# BOOKINFO_URL=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
+BOOKINFO_URL=$(oc get gateway bookinfo-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
 echo "Bookinfo: http://${BOOKINFO_URL}/productpage"
 
 # Get Kiali URL

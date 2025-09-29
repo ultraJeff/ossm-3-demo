@@ -30,7 +30,6 @@ The demo includes two sample applications:
 - **Service Mesh**: Uses Istio CNI for pod networking instead of init containers
 - **Observability Stack**: Tempo + OpenTelemetry + Kiali + OpenShift monitoring
 - **Dual Ingress**: Traditional Istio Gateway alongside Kubernetes Gateway API
-- **Traffic Management**: VirtualServices and DestinationRules for traffic splitting
 
 ## Common Development Tasks
 

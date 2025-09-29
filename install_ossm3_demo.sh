@@ -50,6 +50,7 @@ oc apply -f ./resources/TempoOtel/istioTelemetry.yaml  -n istio-system
 echo "Adding OTEL namespace as a part of the mesh"
 oc label namespace opentelemetrycollector istio-injection=enabled
 
+# TODO: Is this needed anymore with k8s native Gateway?
 echo "Creating ingress gateways..."
 echo "Adding istio-ingress namespace as a part of the mesh"
 oc label namespace istio-ingress istio-injection=enabled
@@ -87,7 +88,7 @@ echo "Installing Sample RestAPI..."
 oc apply -k ./resources/application/kustomize/overlays/pod 
 
 echo "Installing Bookinfo (SM3 Sidecar)..."
-oc apply -k ./resources/bookinfo/kustomize/overlays/traditional
+oc apply -k ./resources/bookinfo/overlays/traditional
 # oc new-project bookinfo
 # echo "Adding bookinfo namespace as a part of the mesh"
 # oc label namespace bookinfo istio-injection=enabled
@@ -102,14 +103,50 @@ oc wait --for=condition=Ready pods --all -n bookinfo --timeout 60s
 echo "Installation finished!"
 echo "NOTE: Kiali will show metrics of bookinfo app right after pod monitor will be ready. You can check it in OCP console Observe->Metrics"
 
-# this env will be used in traffic generator
-# TODO: This is wrong for SM3
-export INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
+# Wait for Gateway to get an address assigned
+echo "Waiting for Gateway to get an address..."
+for i in {1..30}; do
+  # This doesn't work with SM3, istio gateway route is a service mesh 2 thing
+  # INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
+  INGRESSHOST=$(oc get gateway bookinfo-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+  if [ ! -z "$INGRESSHOST" ]; then
+    echo "Gateway address obtained: $INGRESSHOST"
+    break
+  fi
+  echo "Waiting for Gateway address (attempt $i/30)..."
+  sleep 2
+done
+
+if [ -z "$INGRESSHOST" ]; then
+  echo "Warning: Could not get Gateway address. The Gateway may still be provisioning."
+  echo "You can check later with: oc get gateway bookinfo-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}'"
+  INGRESSHOST="<pending>"
+fi
+
 KIALI_HOST=$(oc get route kiali -n istio-system -o=jsonpath='{.spec.host}')
 
 echo "[optional] Installing Bookinfo traffic generator..."
-cat ./resources/bookinfo/base/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f - 
-oc apply -f ./resources/Bookinfo/traffic-generator.yaml -n bookinfo
+if [ "$INGRESSHOST" != "<pending>" ]; then
+  # Update the ConfigMap with the new route
+  cat ./resources/bookinfo/base/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f -
+  
+  # Check if the ReplicaSet already exists
+  if oc get rs kiali-traffic-generator -n bookinfo &>/dev/null; then
+    echo "Traffic generator already exists, restarting it with new configuration..."
+    # Delete existing pods to force them to pick up the new ConfigMap
+    oc delete rs kiali-traffic-generator -n bookinfo --force --grace-period=0
+    # Recreate the ReplicaSet
+    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n bookinfo
+  else
+    # Create new ReplicaSet
+    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n bookinfo
+  fi
+  
+  echo "Waiting for traffic generator to start..."
+  oc wait --for=condition=Ready pod -l app=kiali-traffic-generator -n bookinfo --timeout=60s 2>/dev/null || true
+else
+  echo "Skipping traffic generator installation as Gateway address is not yet available."
+fi
 
 echo "===================================================================================================="
 echo "Ingress route for bookinfo is: http://${INGRESSHOST}/productpage"

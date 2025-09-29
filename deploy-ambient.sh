@@ -12,10 +12,16 @@ echo -e "${BYellow}Checking ambient mode infrastructure...${NC}"
 
 # Deploy ambient OSSM3 configuration
 echo -e "${BYellow}Applying ambient OSSM3 configuration...${NC}"
+# Delete existing ingress gateway deployment if it exists (selector is immutable)
+# if oc get deployment istio-ingressgateway -n istio-ingress &>/dev/null; then
+#     echo -e "${BYellow}Removing existing ingress gateway deployment to update selector...${NC}"
+#     oc delete deployment istio-ingressgateway -n istio-ingress --force --grace-period=0
+# fi
 oc apply -k resources/ossm3/overlays/ambient
 oc wait --for condition=Ready istio/default --timeout 90s -n istio-system
 oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
-oc wait --for condition=Ready ztunnel/default --timeout 60s -n ztunnel
+# Wait for ztunnel with increased timeout since it's a new deployment
+oc wait --for condition=Ready ztunnel/default --timeout 120s -n ztunnel || echo -e "${BYellow}ZTunnel may still be initializing...${NC}"
 
 # Verify ztunnel is running
 echo -e "${BYellow}Verifying ztunnel deployment...${NC}"
@@ -25,7 +31,7 @@ fi
 
 # Deploy bookinfo in ambient mode
 echo -e "${BYellow}Deploying Bookinfo in ambient mode with waypoint...${NC}"
-oc apply -k bookinfo/overlays/ambient
+oc apply -k resources/bookinfo/overlays/ambient
 
 echo -e "${BYellow}Waiting for pods to be ready...${NC}"
 oc wait --for=condition=Ready pods --all -n bookinfo --timeout 120s
@@ -45,7 +51,39 @@ echo ""
 echo "Waypoint gateway should exist for L7 observability:"
 echo "oc get gateway bookinfo-waypoint -n bookinfo"
 echo ""
-INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}' 2>/dev/null)
+# Wait for Gateway to get an address
+for i in {1..15}; do
+    INGRESSHOST=$(oc get gateway bookinfo-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+    if [ ! -z "$INGRESSHOST" ]; then
+        break
+    fi
+    echo "Waiting for Gateway address (attempt $i/15)..."
+    sleep 2
+done
+
+echo "[optional] Installing Bookinfo traffic generator..."
+if [ "$INGRESSHOST" != "<pending>" ]; then
+  # Update the ConfigMap with the new route
+  cat ./resources/bookinfo/base/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f -
+  
+  # Check if the ReplicaSet already exists
+  if oc get rs kiali-traffic-generator -n bookinfo &>/dev/null; then
+    echo "Traffic generator already exists, restarting it with new configuration..."
+    # Delete existing pods to force them to pick up the new ConfigMap
+    oc delete rs kiali-traffic-generator -n bookinfo --force --grace-period=0
+    # Recreate the ReplicaSet
+    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n bookinfo
+  else
+    # Create new ReplicaSet
+    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n bookinfo
+  fi
+  
+  echo "Waiting for traffic generator to start..."
+  oc wait --for=condition=Ready pod -l app=kiali-traffic-generator -n bookinfo --timeout=60s 2>/dev/null || true
+else
+  echo "Skipping traffic generator installation as Gateway address is not yet available."
+fi
+
 if [ ! -z "$INGRESSHOST" ]; then
     echo "Bookinfo URL: http://${INGRESSHOST}/productpage"
 fi
