@@ -8,4 +8,4 @@ resources:
 - bookinfo.yaml
 - traffic-generator-configmap.yaml
 - traffic-generator.yaml
-- podMonitor.yaml
+- pod-monitor.yaml

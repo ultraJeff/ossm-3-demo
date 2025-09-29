@@ -1,4 +1,3 @@
-# Needed for Ambient Mesh, but this is technically just Bookinfo using the Gateway API
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:

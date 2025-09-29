@@ -18,8 +18,20 @@ This guide demonstrates switching between **Traditional Sidecar Mode** and **Amb
 
 ## Quick Demo Commands
 
-### Deploy Traditional Mode
+### First time deploy
 ```bash
+./install_ossm3_demo.sh
+```
+
+### Switch to Ambient Mode
+```bash
+./cleanup-bookinfo.sh
+./deploy-ambient.sh
+```
+
+### Switch Back to Traditional Mode
+```bash
+./cleanup-bookinfo.sh
 ./deploy-traditional.sh
 ```
 
@@ -27,12 +39,6 @@ This guide demonstrates switching between **Traditional Sidecar Mode** and **Amb
 ```bash
 oc get pods -n bookinfo                    # Should show 2/2 containers
 oc get namespace bookinfo -o yaml | grep istio-injection
-```
-
-### Switch to Ambient Mode
-```bash
-./cleanup-bookinfo.sh
-./deploy-ambient.sh
 ```
 
 **Verification:**
@@ -94,7 +100,8 @@ bookinfo/
 
 ### 1. Start with Traditional Mode
 ```bash
-./deploy-traditional.sh
+./install_ossm3_demo.sh
+# ./deploy-traditional.sh
 oc get pods -n bookinfo  # Show 2/2 containers
 ```
 - Open Kiali, show rich service graph
@@ -116,7 +123,7 @@ oc describe pod <bookinfo-pod> | grep -A5 -B5 istio-proxy
 
 # Ambient: Shared ztunnel across nodes
 oc get daemonset ztunnel -n ztunnel
-oc top pod -n ztunnel
+oc adm top pods -n ztunnel
 ```
 
 ## Troubleshooting

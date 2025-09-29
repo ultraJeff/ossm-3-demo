@@ -4,3 +4,5 @@ metadata:
   name: bookinfo
   labels:
     istio.io/dataplane-mode: ambient
+    # To see L7 traffic in Kiali
+    istio.io/use-waypoint: waypoint

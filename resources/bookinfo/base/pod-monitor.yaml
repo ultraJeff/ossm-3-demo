@@ -1,3 +1,4 @@
+# TODO: Do we need this or is it redundant with other PodMonitors?
 apiVersion: monitoring.coreos.com/v1
 kind: PodMonitor
 metadata:
