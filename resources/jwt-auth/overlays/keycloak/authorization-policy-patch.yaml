@@ -1,0 +1,27 @@
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: jwt-authz
+  namespace: istio-ingress
+spec:
+  selector:
+    matchLabels:
+      app: hello-gateway
+  action: ALLOW
+  rules:
+  # Allow requests with valid JWT and specific roles
+  - from:
+    - source:
+        requestPrincipals: ["*"]
+    to:
+    - operation:
+        paths: ["/*"]
+    when:
+    # Check for required Keycloak roles
+    - key: request.auth.claims[realm_access][roles]
+      values: ["api-user", "rest-api-access", "admin"]
+  # Allow /docs endpoint without authentication (used for health checks)
+  - to:
+    - operation:
+        paths: 
+        - "/docs"

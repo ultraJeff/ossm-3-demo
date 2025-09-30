@@ -1,0 +1,23 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: istio-ingress
+spec:
+  selector:
+    matchLabels:
+      app: hello-gateway
+  jwtRules:
+  - issuer: "https://example.com"
+    jwksUri: "https://example.com/.well-known/jwks.json"
+    audiences:
+    - "rest-api"
+    # Optional: Forward JWT payload to upstream services
+    forwardOriginalToken: true
+    # Optional: Specify where to find the token
+    fromHeaders:
+    - name: Authorization
+      prefix: "Bearer "
+    # Optional: Also check cookies for JWT
+    # fromCookies:
+    # - jwt_token

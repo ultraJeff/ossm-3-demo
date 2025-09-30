@@ -1,0 +1,22 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: istio-ingress
+spec:
+  jwtRules:
+  - issuer: "https://keycloak.example.com/auth/realms/master"
+    # Keycloak/RHSSO JWKS endpoint format
+    jwksUri: "https://keycloak.example.com/auth/realms/master/protocol/openid-connect/certs"
+    audiences:
+    - "rest-api"
+    - "account"
+    forwardOriginalToken: true
+    # Optional: Map Keycloak claims to Istio
+    outputClaimToHeaders:
+    - header: x-jwt-email
+      claim: email
+    - header: x-jwt-roles
+      claim: realm_access.roles
+    - header: x-jwt-username
+      claim: preferred_username

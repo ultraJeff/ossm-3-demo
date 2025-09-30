@@ -1,0 +1,26 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: istio-ingress
+spec:
+  jwtRules:
+  # Using your SSH RSA key for JWT signing
+  # Tokens are generated using the generate-jwt.sh script
+  - issuer: "demo.local"
+    jwks: |
+      {
+        "keys": [
+          {
+            "kty": "RSA",
+            "use": "sig",
+            "kid": "ssh-rsa-key",
+            "n": "uI9nXvpvI8kBTR9Ii-JMVncjwFwOuN3UpMih4acNhZQ85iKiZeQLQ4VHxDdtVobYbsb1Re5iBowYQf9k0HSW0bSW32mBLC3EYat_01yi3ECYHIWtQChc8qVl2N9ftlnnLBneSqKU6CdFCPldzclIo5P65I0XTyL3u1Ma8GTGCed7yOltyNAcdSaAKjapukpEOVJZVi-UNMHC28WKmH5lEXkfEChIUaxooa_cw1EpEbcfHGUl2lmqS1dkPCvuIoQAbevLFtnmdfOW4aZ8MeMk0vn9HkIhHEHsc9RtVzJ3zJUZiAVkVm0zedc3JdktXwARp652JyvXFg2r2vBylsoYF2fnb_YcIhH8-AnSbLsghtCr7q7IuXS1dAZ_4c8-c3kSkuJZ9nkJ7-7My8hOuo8iRqMITGvuJO04Jg1a44aT7fbb6gRItzGyYlTwjodmoVCez3rWvJuuWeHrgJ-kMK063ESFhGZGAP8W0-PEOWIBshoFpubHX963Pi4O2m0h9QxMQidxUQ8WE2_yUobbsvmoEgEWZiSt0D2UzDNabw-nN-b5zpXTNG0R4aSdlsRf0_yqfvTYZeIw08x96CZ61HyWOg8TLF9qLH8vHhgOwsYv0Z_2UUmcU-F_4tymbZxXA2kZ2BJKvC1kBNL4yKgzXuExJ_uJknjICAsr9e6Jkd9gVFM",
+            "e": "AQAB",
+            "alg": "RS256"
+          }
+        ]
+      }
+    audiences:
+    - "rest-api"
+    forwardOriginalToken: true

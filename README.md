@@ -243,6 +243,26 @@ Install the sample RestAPI `hello-service` via Kustomize
 oc apply -k ./resources/application/kustomize/overlays/pod 
 ```
 
+Optional: Enable JWT Authentication for RestAPI
+------------
+Secure your RestAPI with JWT authentication to require valid tokens for access.
+
+### Quick Setup with Demo Provider
+```bash
+# Apply JWT authentication configuration
+oc apply -k ./resources/jwt-auth/overlays/demo
+
+# Test JWT authentication
+./resources/jwt-auth/test-jwt-auth.sh
+```
+
+### Production Setup Options
+- **Keycloak/RHSSO**: See `resources/jwt-auth/overlays/keycloak/SETUP.md`
+- **Auth0**: See `resources/jwt-auth/overlays/auth0/SETUP.md`
+- **Custom Provider**: Modify `resources/jwt-auth/base/` with your JWKS endpoint
+
+For detailed JWT configuration and testing, see `resources/jwt-auth/README.md`
+
 Test that everything works correctly
 ------------
 Now, everything should be set.  

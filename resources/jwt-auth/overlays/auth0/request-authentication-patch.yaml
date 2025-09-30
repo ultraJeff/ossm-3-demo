@@ -1,0 +1,21 @@
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-auth
+  namespace: istio-ingress
+spec:
+  jwtRules:
+  - issuer: "https://your-tenant.auth0.com/"
+    jwksUri: "https://your-tenant.auth0.com/.well-known/jwks.json"
+    audiences:
+    - "https://rest-api.example.com"
+    - "YOUR_AUTH0_API_IDENTIFIER"
+    forwardOriginalToken: true
+    # Map Auth0 claims to headers
+    outputClaimToHeaders:
+    - header: x-jwt-email
+      claim: email
+    - header: x-jwt-permissions
+      claim: permissions
+    - header: x-jwt-scope
+      claim: scope
