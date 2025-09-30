@@ -17,11 +17,12 @@ oc apply -f ./resources/subscriptions.yaml
 echo "Waiting till all operators pods are ready"
 until oc get pods -n openshift-operators | grep servicemesh-operator3 | grep Running; do echo "Waiting for servicemesh-operator3 to be running."; sleep 10;done
 until oc get pods -n openshift-operators | grep kiali-operator | grep Running; do echo "Waiting for kiali-operator to be running."; sleep 10;done
-until oc get pods -n openshift-operators | grep opentelemetry-operator | grep Running; do echo "Waiting for opentelemetry-operator to be running."; sleep 10;done
-until oc get pods -n openshift-operators | grep tempo-operator | grep Running; do echo "Waiting for tempo-operator to be running."; sleep 10;done
+until oc get pods -n openshift-opentelemetry-operator | grep opentelemetry-operator | grep Running; do echo "Waiting for opentelemetry-operator to be running."; sleep 10;done
+until oc get pods -n openshift-tempo-operator | grep tempo-operator | grep Running; do echo "Waiting for tempo-operator to be running."; sleep 10;done
 
 echo "All operators were installed successfully"
 oc get pods -n openshift-operators
 
+# This is for legacy OCP versions that do not have Gateway API enabled by default - safe to keep for now
 echo "Enabling Gateway API"
 oc get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { oc kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | oc apply -f -; }
