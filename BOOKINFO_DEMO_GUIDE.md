@@ -1,6 +1,36 @@
 # Bookinfo Service Mesh Demo Guide
 
-This guide demonstrates switching between **Traditional Sidecar Mode** and **Ambient Mode** using the Bookinfo application.
+This guide is an idea for a flow to demo of all the features.
+
+Start on the sidecar cluster `oc config use-context sidecar-mesh`
+
+Show Kiali and console plugin features of Service Mesh in OpenShift (kiali, traces, drilling into services)
+
+Show REST API and adjust the weights in the Virtual Service to switch traffic between two endpoints using `./scripts/generate-traffic.sh`
+
+Show Kiali in sidecar SM3 and show Envoy sidecar containers running in the pods. Click into sidecar and show the size of the sidecar container requests
+
+Do `oc adm top -n bookinfo` and show resources being consumed
+
+Show mTLS on by default
+
+Switch to Ambient Mesh SM3 (`oc config use-context ambient-mesh`)
+
+Do `oc adm top -n ztunnel` and show how few resources are being consumed
+
+Do `oc adm top -n bookinfo` and show resources being consumed
+
+Show REST API again and generate traffic to it, then apply the Authorization Policy and Request Authentication and watch the traffic die
+
+`./resources/jwt-auth/test-jwt-auth.sh`
+
+**or**
+
+`curl -s a0153b9e91372440289dd90a5f6d9a0d-1853560166.us-east-2.elb.amazonaws.com/hello`
+
+and then
+
+` curl -s -H 'Authorization: Bearer $TOKEN' a0153b9e91372440289dd90a5f6d9a0d-1853560166.us-east-2.elb.amazonaws.com/hello`
 
 ## Architecture Overview
 
@@ -25,15 +55,16 @@ This guide demonstrates switching between **Traditional Sidecar Mode** and **Amb
 
 ### Switch to Ambient Mode
 ```bash
-./cleanup-bookinfo.sh
+# ./cleanup-bookinfo.sh
 ./deploy-ambient.sh
 ```
 
+<!-- TODO Won't work as-is due to added labels
 ### Switch Back to Traditional Mode
 ```bash
 ./cleanup-bookinfo.sh
 ./deploy-traditional.sh
-```
+``` -->
 
 **Verification:**
 ```bash

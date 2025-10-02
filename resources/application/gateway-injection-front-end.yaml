@@ -8,6 +8,16 @@ spec:
   gateways:
   - istio-system/prod-gateway
   http:
+  # TODO: Faults aren't taking
+  # - fault:
+  #     abort:
+  #       httpStatus: 500
+  #       percentage:
+  #         value: 100
+  #     delay:
+  #       percentage:
+  #         value: 50 # Inject delay for 50% of requests
+  #       fixedDelay: 5s # Introduce a 5-second delay
   - match:
     - uri:
         exact: "/web"

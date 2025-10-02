@@ -19,6 +19,7 @@ oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 
 # Deploy bookinfo with sidecar injection
 echo -e "${BYellow}Deploying Bookinfo with sidecar injection...${NC}"
+# TODO: Need to start fresh from labels instead of just applying more
 oc apply -k resources/bookinfo/overlays/traditional
 
 echo -e "${BYellow}Waiting for pods to be ready...${NC}"

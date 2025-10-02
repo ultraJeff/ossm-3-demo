@@ -47,8 +47,8 @@ The OSSM3 configurations are organized using Kustomize overlays:
 - `resources/ossm3/overlays/traditional/` - Traditional sidecar mode configuration
 - `resources/ossm3/overlays/ambient/` - Ambient mode configuration with ztunnel
 
-## Shortcut to the end
-To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ossm3_demo.sh` script which will perform all steps automatically.
+<!-- ## Shortcut to the end
+To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ossm3_demo.sh` script which will perform all steps automatically. -->
 
 ## Full Infrastructure Setup
 To set up the complete OSSM3 infrastructure (operators, observability, etc.), run:
@@ -101,6 +101,7 @@ oc wait --for condition=Available deployment/otel-collector --timeout 60s -n ope
 
 Set up OSSM3
 ------------
+<!-- TODO - kustomize this (and everything) so that projects don't have to be created like this-->
 First, create the required namespaces:
 ```bash
 oc new-project istio-system
