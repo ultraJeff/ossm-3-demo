@@ -2,6 +2,8 @@ apiVersion: sailoperator.io/v1
 kind: Istio
 metadata:
   name: default
+  labels:
+    service-mesh-mode: traditional
 spec:
   namespace: istio-system
   profile: openshift
@@ -13,3 +15,8 @@ spec:
         opentelemetry:
           port: 4317
           service: otel-collector.opentelemetrycollector.svc.cluster.local
+      # OPA external authorizer for policy-based authorization
+      - name: opa-ext-authz-grpc
+        envoyExtAuthzGrpc:
+          service: bookinfo-opa/opa-ext-authz-grpc.local
+          port: 9191

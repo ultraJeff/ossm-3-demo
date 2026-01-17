@@ -1,0 +1,9 @@
+# Namespace for BookInfo with OPA authorization
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bookinfo-opa
+  labels:
+    istio-injection: enabled
+    opa-istio-injection: enabled
+

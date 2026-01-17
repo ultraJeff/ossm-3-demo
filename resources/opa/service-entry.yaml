@@ -1,0 +1,20 @@
+# ServiceEntry for OPA ext_authz sidecar
+# Points to localhost:9191 where the OPA sidecar listens
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: opa-ext-authz-grpc-local
+  namespace: bookinfo-opa
+spec:
+  hosts:
+  - opa-ext-authz-grpc.local
+  ports:
+  - name: grpc
+    number: 9191
+    protocol: GRPC
+  resolution: STATIC
+  endpoints:
+  - address: 127.0.0.1
+  exportTo:
+  - "."
+

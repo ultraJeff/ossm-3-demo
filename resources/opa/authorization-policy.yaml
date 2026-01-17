@@ -1,0 +1,17 @@
+# AuthorizationPolicy to delegate authorization to OPA
+# Uses CUSTOM action with the opa-ext-authz-grpc provider
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: ext-authz
+  namespace: bookinfo-opa
+spec:
+  action: CUSTOM
+  provider:
+    name: opa-ext-authz-grpc
+  rules:
+  - to:
+    - operation:
+        notPaths:
+        - /health
+
