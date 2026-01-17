@@ -1,22 +1,28 @@
-kind: TempoStack
+# TempoStack - Distributed tracing backend with gateway for COO UI integration
+# Gateway enabled with RBAC disabled for simplified multi-tenant access
 apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
 metadata:
   name: sample
+  namespace: tracing-system
 spec:
   storage:
     secret:
       name: my-storage-secret
       type: s3
   storageSize: 1Gi
+  retention:
+    global:
+      traces: 48h
+  replicationFactor: 1
   template:
-    querier:
-      resources:
-        limits:
-          cpu: "2"
+    gateway:
+      enabled: true
+      rbac:
+        enabled: false
     queryFrontend:
-      component:
-        resources:
-          limits:
-            memory: 6Gi
       jaegerQuery:
-        enabled: true
+        enabled: false
+    distributor:
+      tls:
+        enabled: false

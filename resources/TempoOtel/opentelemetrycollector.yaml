@@ -1,22 +1,43 @@
+# OpenTelemetry Collector for receiving traces from Istio and forwarding to Tempo
+# Uses bearer token authentication and TLS to communicate with TempoStack gateway
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
 metadata:
   name: otel
+  namespace: opentelemetrycollector
 spec:
+  serviceAccount: otel-collector-tempo
   config:
     receivers:
       otlp:
         protocols:
           grpc:
             endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    extensions:
+      bearertokenauth:
+        filename: /var/run/secrets/kubernetes.io/serviceaccount/token
     exporters:
       otlp:
-        endpoint: "tempo-sample-distributor.tracing-system.svc.cluster.local:4317"
+        endpoint: "tempo-sample-gateway.tracing-system.svc.cluster.local:8090"
+        headers:
+          X-Scope-OrgID: dev
         tls:
-          insecure: true
+          ca_file: /etc/tempo-ca/ca.crt
+        auth:
+          authenticator: bearertokenauth
     service:
+      extensions: [bearertokenauth]
       pipelines:
         traces:
           receivers: [otlp]
           processors: []
           exporters: [otlp]
+  volumes:
+    - name: tempo-ca
+      configMap:
+        name: tempo-ca
+  volumeMounts:
+    - name: tempo-ca
+      mountPath: /etc/tempo-ca

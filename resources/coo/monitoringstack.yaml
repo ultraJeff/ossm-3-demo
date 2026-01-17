@@ -1,0 +1,19 @@
+apiVersion: monitoring.rhobs/v1alpha1
+kind: MonitoringStack
+metadata:
+  name: service-mesh-monitoring
+  namespace: coo-service-mesh
+spec:
+  logLevel: info
+  retention: 24h
+  # Allow the MonitoringStack to scrape across namespaces
+  createClusterRoleBindings: CreateClusterRoleBindings
+  # Select namespaces with this label for monitoring
+  namespaceSelector:
+    matchLabels:
+      monitoring.rhobs/stack: service-mesh
+  # Monitor all resources in those namespaces
+  resourceSelector: {}
+  prometheusConfig:
+    replicas: 1
+

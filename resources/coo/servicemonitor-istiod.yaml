@@ -1,0 +1,21 @@
+# ServiceMonitor for scraping Istiod (Pilot) metrics
+# Collects control plane metrics like pilot_info, pilot_xds_pushes, etc.
+apiVersion: monitoring.rhobs/v1
+kind: ServiceMonitor
+metadata:
+  name: istiod-monitor
+  namespace: coo-service-mesh
+  labels:
+    app: istiod
+spec:
+  namespaceSelector:
+    matchNames:
+    - istio-system
+  selector:
+    matchLabels:
+      app: istiod
+  endpoints:
+  - port: http-monitoring
+    interval: 15s
+    path: /metrics
+

@@ -1,0 +1,55 @@
+# PodMonitor for scraping Istio sidecar proxies (Envoy)
+# Collects metrics like istio_requests_total, istio_request_duration_milliseconds, etc.
+apiVersion: monitoring.rhobs/v1
+kind: PodMonitor
+metadata:
+  name: istio-proxies
+  namespace: coo-service-mesh
+  labels:
+    app: istio-proxies
+spec:
+  selector:
+    matchExpressions:
+    - key: istio-prometheus-ignore
+      operator: DoesNotExist
+  namespaceSelector:
+    matchNames:
+    - bookinfo
+    - rest-api-with-mesh
+    - istio-ingress
+  podMetricsEndpoints:
+  - path: /stats/prometheus
+    port: http-envoy-prom
+    interval: 15s
+    relabelings:
+    # Only scrape pods with istio-proxy container
+    - action: keep
+      sourceLabels: [__meta_kubernetes_pod_container_name]
+      regex: "istio-proxy"
+    # Only scrape pods with prometheus.io/scrape annotation
+    - action: keep
+      sourceLabels: [__meta_kubernetes_pod_annotationpresent_prometheus_io_scrape]
+    # Handle IPv6 addresses
+    - action: replace
+      regex: (\d+);(([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4})
+      replacement: '[$2]:$1'
+      sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __meta_kubernetes_pod_ip]
+      targetLabel: __address__
+    # Handle IPv4 addresses
+    - action: replace
+      regex: (\d+);((([0-9]+?)(\.|$)){4})
+      replacement: $2:$1
+      sourceLabels: [__meta_kubernetes_pod_annotation_prometheus_io_port, __meta_kubernetes_pod_ip]
+      targetLabel: __address__
+    # Drop pod labels to reduce cardinality
+    - action: labeldrop
+      regex: "__meta_kubernetes_pod_label_(.+)"
+    # Add namespace label
+    - sourceLabels: [__meta_kubernetes_namespace]
+      action: replace
+      targetLabel: namespace
+    # Add pod name label
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      action: replace
+      targetLabel: pod_name
+

@@ -18,18 +18,24 @@ oc apply -f ./resources/TempoOtel/minio.yaml -n tracing-system
 echo "Waiting for Minio to become available..."
 oc wait --for condition=Available deployment/minio --timeout 150s -n tracing-system
 
-echo "Installing TempoCR"
+echo "Installing TempoStack"
 oc apply -f ./resources/TempoOtel/tempo.yaml -n tracing-system
 echo "Waiting for TempoStack to become ready..."
 oc wait --for condition=Ready TempoStack/sample --timeout 150s -n tracing-system
-echo "Waiting for Tempo deployment to become available..."
-oc wait --for condition=Available deployment/tempo-sample-compactor --timeout 150s -n tracing-system
+echo "Waiting for Tempo gateway deployment to become available..."
+oc wait --for condition=Available deployment/tempo-sample-gateway --timeout 150s -n tracing-system
 
-echo "Exposing Jaeger UI route (will be used in kiali ui)"
-oc expose svc tempo-sample-query-frontend --port=jaeger-ui --name=tracing-ui -n tracing-system
+echo "Setting up OpenTelemetry Collector..."
+oc new-project opentelemetrycollector
+echo "Creating OTEL collector service account and RBAC..."
+oc apply -f ./resources/TempoOtel/otel-collector-rbac.yaml
+
+echo "Creating CA certificate ConfigMap for Tempo TLS..."
+# Extract service serving CA for TLS to Tempo gateway
+oc get configmap openshift-service-ca.crt -n openshift-config-managed -o jsonpath='{.data.service-ca\.crt}' > /tmp/service-ca.crt
+oc create configmap tempo-ca --from-file=ca.crt=/tmp/service-ca.crt -n opentelemetrycollector --dry-run=client -o yaml | oc apply -f -
 
 echo "Installing OpenTelemetryCollector..."
-oc new-project opentelemetrycollector
 oc apply -f ./resources/TempoOtel/opentelemetrycollector.yaml -n opentelemetrycollector
 echo "Waiting for OpenTelemetryCollector deployment to become available..."
 oc wait --for condition=Available deployment/otel-collector --timeout 60s -n opentelemetrycollector
@@ -47,8 +53,8 @@ oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 
 echo "Installing Telemetry resource..."
 oc apply -f ./resources/TempoOtel/istioTelemetry.yaml  -n istio-system
-echo "Adding OTEL namespace as a part of the mesh"
-oc label namespace opentelemetrycollector istio-injection=enabled
+# NOTE: Do NOT add istio-injection to opentelemetrycollector namespace
+# The OTEL collector needs to connect to Tempo without mTLS interference
 
 # TODO: Is this needed anymore with k8s native Gateway?
 echo "Creating ingress gateways..."
@@ -75,7 +81,8 @@ oc project istio-system
 echo "Creating cluster role binding for kiali to read ocp monitoring"
 oc apply -f ./resources/Kiali/kialiCrb.yaml -n istio-system
 echo "Installing KialiCR..."
-export TRACING_INGRESS_ROUTE="http://$(oc get -n tracing-system route tracing-ui -o jsonpath='{.spec.host}')"
+# Tempo internal URL is used for tracing integration (no external Jaeger UI route needed)
+export TRACING_INGRESS_ROUTE=""
 cat ./resources/Kiali/kialiCr.yaml | JAEGERROUTE="${TRACING_INGRESS_ROUTE}" envsubst | oc -n istio-system apply -f - 
 echo "Waiting for kiali to become ready..."
 oc wait --for condition=Successful kiali/kiali --timeout 150s -n istio-system 

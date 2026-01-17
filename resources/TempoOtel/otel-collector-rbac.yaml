@@ -1,0 +1,23 @@
+# Service Account and RBAC for OpenTelemetry Collector to write traces to TempoStack
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector-tempo
+  namespace: opentelemetrycollector
+---
+# ClusterRoleBinding to allow the collector to write traces to TempoStack
+# The ClusterRole 'tempostack-traces-writer' is created automatically by the Tempo Operator
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-tempo-traces-writer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tempostack-traces-writer
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-tempo
+    namespace: opentelemetrycollector
+

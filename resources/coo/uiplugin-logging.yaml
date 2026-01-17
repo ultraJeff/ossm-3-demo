@@ -1,0 +1,15 @@
+# Logging UI Plugin
+# Adds Observe → Logs page to the OpenShift Console
+# Requires LokiStack for full functionality
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: logging
+spec:
+  type: Logging
+  logging:
+    timeout: 30s
+    logsLimit: 1000
+    # Allow users to choose between viaq and otel schema
+    schema: select
+
