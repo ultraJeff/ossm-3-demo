@@ -1,5 +1,6 @@
-# TempoStack - Distributed tracing backend with gateway for COO UI integration
-# Gateway enabled with RBAC disabled for simplified multi-tenant access
+# TempoStack - COO-compatible configuration
+# Gateway enabled for OpenShift Console "Observe → Traces" UI integration
+# RBAC disabled for simplified access (gateway required for COO UI plugin)
 apiVersion: tempo.grafana.com/v1alpha1
 kind: TempoStack
 metadata:
@@ -26,3 +27,4 @@ spec:
     distributor:
       tls:
         enabled: false
+

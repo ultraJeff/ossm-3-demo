@@ -12,31 +12,23 @@ BBlue=''    # Blue
 
 echo "This script set up the whole OSSM3 demo."
 
-echo "Installing Minio for Tempo"
+echo "Installing MinIO for Tempo"
 oc new-project tracing-system
-oc apply -f ./resources/TempoOtel/minio.yaml -n tracing-system
-echo "Waiting for Minio to become available..."
+oc apply -f ./resources/tempootel/base/minio.yaml -n tracing-system
+echo "Waiting for MinIO to become available..."
 oc wait --for condition=Available deployment/minio --timeout 150s -n tracing-system
 
-echo "Installing TempoStack"
-oc apply -f ./resources/TempoOtel/tempo.yaml -n tracing-system
+echo "Installing TempoStack (Kiali-compatible)"
+oc apply -f ./resources/tempootel/overlays/kiali/tempo.yaml -n tracing-system
 echo "Waiting for TempoStack to become ready..."
 oc wait --for condition=Ready TempoStack/sample --timeout 150s -n tracing-system
-echo "Waiting for Tempo gateway deployment to become available..."
-oc wait --for condition=Available deployment/tempo-sample-gateway --timeout 150s -n tracing-system
+echo "Waiting for Tempo compactor deployment to become available..."
+oc wait --for condition=Available deployment/tempo-sample-compactor --timeout 150s -n tracing-system
 
 echo "Setting up OpenTelemetry Collector..."
 oc new-project opentelemetrycollector
-echo "Creating OTEL collector service account and RBAC..."
-oc apply -f ./resources/TempoOtel/otel-collector-rbac.yaml
-
-echo "Creating CA certificate ConfigMap for Tempo TLS..."
-# Extract service serving CA for TLS to Tempo gateway
-oc get configmap openshift-service-ca.crt -n openshift-config-managed -o jsonpath='{.data.service-ca\.crt}' > /tmp/service-ca.crt
-oc create configmap tempo-ca --from-file=ca.crt=/tmp/service-ca.crt -n opentelemetrycollector --dry-run=client -o yaml | oc apply -f -
-
 echo "Installing OpenTelemetryCollector..."
-oc apply -f ./resources/TempoOtel/opentelemetrycollector.yaml -n opentelemetrycollector
+oc apply -f ./resources/tempootel/overlays/kiali/opentelemetrycollector.yaml -n opentelemetrycollector
 echo "Waiting for OpenTelemetryCollector deployment to become available..."
 oc wait --for condition=Available deployment/otel-collector --timeout 60s -n opentelemetrycollector
 
@@ -52,7 +44,7 @@ echo "Waiting for istiocni to become ready..."
 oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 
 echo "Installing Telemetry resource..."
-oc apply -f ./resources/TempoOtel/istioTelemetry.yaml  -n istio-system
+oc apply -f ./resources/tempootel/base/istioTelemetry.yaml -n istio-system
 # NOTE: Do NOT add istio-injection to opentelemetrycollector namespace
 # The OTEL collector needs to connect to Tempo without mTLS interference
 
@@ -68,39 +60,42 @@ echo "Exposing Istio ingress route"
 oc expose svc istio-ingressgateway --port=http2 --name=istio-ingressgateway -n istio-ingress
 
 echo "Enabling user workload monitoring in OCP"
-oc apply -f ./resources/Monitoring/ocpUserMonitoring.yaml
+oc apply -f ./resources/monitoring/ocpUserMonitoring.yaml
 echo "Enabling service monitor in istio-system namespace"
-oc apply -f ./resources/Monitoring/serviceMonitor.yaml -n istio-system
+oc apply -f ./resources/monitoring/serviceMonitor.yaml -n istio-system
 echo "Enabling pod monitor in istio-system namespace"
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n istio-system
+oc apply -f ./resources/monitoring/podMonitor.yaml -n istio-system
 echo "Enabling pod monitor in istio-ingress namespace"
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n istio-ingress
+oc apply -f ./resources/monitoring/podMonitor.yaml -n istio-ingress
 
 echo "Installing Kiali..."
 oc project istio-system
 echo "Creating cluster role binding for kiali to read ocp monitoring"
-oc apply -f ./resources/Kiali/kialiCrb.yaml -n istio-system
+oc apply -f ./resources/kiali/kialiCrb.yaml -n istio-system
 echo "Installing KialiCR..."
 # Tempo internal URL is used for tracing integration (no external Jaeger UI route needed)
 export TRACING_INGRESS_ROUTE=""
-cat ./resources/Kiali/kialiCr.yaml | JAEGERROUTE="${TRACING_INGRESS_ROUTE}" envsubst | oc -n istio-system apply -f - 
+cat ./resources/kiali/kialiCr.yaml | JAEGERROUTE="${TRACING_INGRESS_ROUTE}" envsubst | oc -n istio-system apply -f - 
 echo "Waiting for kiali to become ready..."
 oc wait --for condition=Successful kiali/kiali --timeout 150s -n istio-system 
 oc annotate route kiali haproxy.router.openshift.io/timeout=60s -n istio-system 
 
 echo "Install Kiali OSSM Console plugin..."
-oc apply -f ./resources/Kiali/kialiOssmcCr.yaml -n istio-system
+oc apply -f ./resources/kiali/kialiOssmcCr.yaml -n istio-system
 
 echo "Installing Sample RestAPI..."
 oc apply -k ./resources/application/kustomize/overlays/pod 
 
 echo "Installing Bookinfo (SM3 Sidecar)..."
 oc apply -k ./resources/bookinfo/overlays/traditional
+
+echo "Applying traditional mode console banner..."
+oc apply -k ./resources/console-banner/overlays/traditional
 # oc new-project bookinfo
 # echo "Adding bookinfo namespace as a part of the mesh"
 # oc label namespace bookinfo istio-injection=enabled
 # echo "Enabling pod monitor in bookinfo namespac"
-# oc apply -f ./resources/Monitoring/podMonitor.yaml -n bookinfo
+# oc apply -f ./resources/monitoring/podMonitor.yaml -n bookinfo
 # echo "Installing Bookinfo"
 # oc apply -f ./resources/Bookinfo/bookinfo.yaml -n bookinfo
 # oc apply -f ./resources/Bookinfo/bookinfo-gateway.yaml -n bookinfo

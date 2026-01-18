@@ -7,3 +7,4 @@ spec:
   - providers:
     - name: otel
       randomSamplingPercentage: 100
+

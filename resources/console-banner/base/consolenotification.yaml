@@ -1,0 +1,12 @@
+# Base ConsoleNotification resource
+# This should be patched by overlays with specific text and colors
+apiVersion: console.openshift.io/v1
+kind: ConsoleNotification
+metadata:
+  name: service-mesh-banner
+spec:
+  text: "Service Mesh Demo"
+  location: BannerTop
+  backgroundColor: "#333333"
+  color: "#FFFFFF"
+

@@ -106,3 +106,4 @@ spec:
     name: minio
   port:
     targetPort: console
+

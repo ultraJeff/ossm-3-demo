@@ -1,0 +1,32 @@
+# TempoStack - Kiali-compatible configuration
+# Jaeger UI enabled for Kiali tracing integration
+# No gateway (simpler setup without multi-tenancy)
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: sample
+  namespace: tracing-system
+spec:
+  storage:
+    secret:
+      name: my-storage-secret
+      type: s3
+  storageSize: 1Gi
+  retention:
+    global:
+      traces: 48h
+  replicationFactor: 1
+  template:
+    gateway:
+      enabled: false
+    queryFrontend:
+      jaegerQuery:
+        enabled: true
+        ingress:
+          type: route
+          route:
+            termination: edge
+    distributor:
+      tls:
+        enabled: false
+

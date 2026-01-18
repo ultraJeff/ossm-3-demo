@@ -108,7 +108,7 @@ The distributed tracing UI plugin adds **Observe → Traces** to the OpenShift C
 
 **Requirements for COO Tracing Plugin:**
 - TempoStack must have gateway enabled with a route
-- RBAC for the OTEL collector (see `resources/tempootel/otel-collector-rbac.yaml`)
+- RBAC for the OTEL collector (see `resources/tempootel/overlays/coo/otel-collector-rbac.yaml`)
 - OpenTelemetry Collector must use bearer token auth and send `X-Scope-OrgID` header matching a tenant name
 
 **Features:**

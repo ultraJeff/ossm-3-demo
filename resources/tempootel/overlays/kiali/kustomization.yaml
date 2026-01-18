@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Kiali-optimized Tempo/OTEL configuration
+# - Tempo with Jaeger UI enabled (for Kiali tracing integration)
+# - No gateway (simpler, no multi-tenancy)
+# - OTEL collector with direct connection to Tempo distributor
+
+resources:
+- ../../base
+- tempo.yaml
+- opentelemetrycollector.yaml
+- namespace-opentelemetrycollector.yaml
+

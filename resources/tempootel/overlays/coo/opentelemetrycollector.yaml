@@ -1,4 +1,4 @@
-# OpenTelemetry Collector for receiving traces from Istio and forwarding to Tempo
+# OpenTelemetry Collector - COO-compatible configuration
 # Uses bearer token authentication and TLS to communicate with TempoStack gateway
 apiVersion: opentelemetry.io/v1beta1
 kind: OpenTelemetryCollector
@@ -41,3 +41,4 @@ spec:
   volumeMounts:
     - name: tempo-ca
       mountPath: /etc/tempo-ca
+

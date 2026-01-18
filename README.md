@@ -41,24 +41,53 @@ The quickstart
   * installs RestAPI app in `rest-api-with-mesh` namespace
   * (For ambient mode) installs ztunnel to `ztunnel` namespace
 
-## OSSM3 Configuration Structure
-The OSSM3 configurations are organized using Kustomize overlays:
+## Configuration Structure
+The configurations are organized using Kustomize overlays for maximum flexibility:
+
+### OSSM3 Control Plane
 - `resources/ossm3/base/` - Common resources (ingress gateway)
-- `resources/ossm3/overlays/traditional/` - Traditional sidecar mode configuration
-- `resources/ossm3/overlays/ambient/` - Ambient mode configuration with ztunnel
+- `resources/ossm3/overlays/traditional/` - Traditional sidecar mode
+- `resources/ossm3/overlays/ambient/` - Ambient mode with ztunnel
+
+### Tracing (Tempo + OpenTelemetry)
+- `resources/tempootel/base/` - Common resources (MinIO, Telemetry)
+- `resources/tempootel/overlays/kiali/` - Kiali-optimized (Jaeger UI, no gateway)
+- `resources/tempootel/overlays/coo/` - COO-optimized (gateway, multi-tenant for Observe → Traces)
+
+### Console Banner
+- `resources/console-banner/overlays/traditional/` - Green banner for sidecar mode
+- `resources/console-banner/overlays/ambient/` - Gold banner for ambient mode
+
+### Bookinfo Application
+- `resources/bookinfo/base/` - Common Bookinfo resources
+- `resources/bookinfo/overlays/traditional/` - With sidecar injection
+- `resources/bookinfo/overlays/ambient/` - With waypoint gateway
 
 <!-- ## Shortcut to the end
 To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ossm3_demo.sh` script which will perform all steps automatically. -->
 
 ## Full Infrastructure Setup
-To set up the complete OSSM3 infrastructure (operators, observability, etc.), run:
+
+### Traditional Sidecar Mode
+To set up the complete OSSM3 infrastructure with traditional sidecar injection:
 ```bash
 ./install_operators.sh
 ./install_ossm3_demo.sh
 ```
 
-### For ambient mode manually
+### Ambient Mode
+To set up the complete OSSM3 infrastructure with ambient mode (no sidecars):
 ```bash
+./install_operators.sh
+./install_ambient_demo.sh
+```
+
+### Manual OSSM3 Deployment (without full demo)
+```bash
+# Traditional mode
+oc apply -k resources/ossm3/overlays/traditional
+
+# Ambient mode
 oc apply -k resources/ossm3/overlays/ambient
 ```
 
@@ -77,26 +106,41 @@ Set up Tempo and OpenTelemetryCollector
 ```bash
 oc new-project tracing-system
 ```
-First, set up MiniO storage which is used by Tempo to store data (or you can use S3 storage, see Tempo documentation)
+First, set up MinIO storage which is used by Tempo to store data (or you can use S3 storage, see Tempo documentation)
 ```bash
-oc apply -f ./resources/TempoOtel/minio.yaml -n tracing-system
+oc apply -f ./resources/tempootel/base/minio.yaml -n tracing-system
 oc wait --for condition=Available deployment/minio --timeout 150s -n tracing-system
 ```
-Then, set up Tempo CR
+
+Then, set up Tempo CR (choose based on your tracing UI preference):
+
+**Option A: Kiali-optimized (Jaeger UI in Kiali)**
 ```bash
-oc apply -f ./resources/TempoOtel/tempo.yaml -n tracing-system
+oc apply -f ./resources/tempootel/overlays/kiali/tempo.yaml -n tracing-system
 oc wait --for condition=Ready TempoStack/sample --timeout 150s -n tracing-system
-oc wait --for condition=Available deployment/tempo-sample-compactor --timeout 150s -n tracing-system
 ```
-Expose Jaeger UI route which will be used in the Kiali CR later
+
+**Option B: COO-optimized (OpenShift Console → Observe → Traces)**
 ```bash
-oc expose svc tempo-sample-query-frontend --port=jaeger-ui --name=tracing-ui -n tracing-system
+oc apply -f ./resources/tempootel/overlays/coo/tempo.yaml -n tracing-system
+oc wait --for condition=Ready TempoStack/sample --timeout 150s -n tracing-system
 ```
-Next, set up OpenTelemetryCollector
+
+Next, set up OpenTelemetryCollector (matching your Tempo choice):
+
+**Option A: Kiali-optimized**
 ```bash
 oc new-project opentelemetrycollector
-oc apply -f ./resources/TempoOtel/opentelemetrycollector.yaml -n opentelemetrycollector
+oc apply -f ./resources/tempootel/overlays/kiali/opentelemetrycollector.yaml -n opentelemetrycollector
 oc wait --for condition=Available deployment/otel-collector --timeout 60s -n opentelemetrycollector
+```
+
+**Option B: COO-optimized** (requires additional setup - see `resources/tempootel/README.md`)
+```bash
+oc new-project opentelemetrycollector
+oc apply -f ./resources/tempootel/overlays/coo/otel-collector-rbac.yaml
+# Create CA ConfigMap (see resources/tempootel/README.md for details)
+oc apply -f ./resources/tempootel/overlays/coo/opentelemetrycollector.yaml -n opentelemetrycollector
 ```
 
 Set up OSSM3
@@ -130,7 +174,7 @@ oc wait --for condition=Ready ztunnel/default --timeout 60s -n ztunnel
 
 Then, set up Telemetry resource to enable tracers defined in Istio custom resource
 ```bash
-oc apply -f ./resources/TempoOtel/istioTelemetry.yaml  -n istio-system
+oc apply -f ./resources/tempootel/base/istioTelemetry.yaml -n istio-system
 ```
 The opentelemetrycollector namespace needs to be added as a member of the mesh
 ```bash
@@ -158,26 +202,26 @@ Set up OCP user monitoring workflow
 ------------
 First, OCP user monitoring needs to be enabled
 ```bash
-oc apply -f ./resources/Monitoring/ocpUserMonitoring.yaml
+oc apply -f ./resources/monitoring/ocpUserMonitoring.yaml
 ```
 Then, create service monitor and pod monitor for istio namespaces
 ```bash
-oc apply -f ./resources/Monitoring/serviceMonitor.yaml -n istio-system
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n istio-system
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n istio-ingress
+oc apply -f ./resources/monitoring/serviceMonitor.yaml -n istio-system
+oc apply -f ./resources/monitoring/podMonitor.yaml -n istio-system
+oc apply -f ./resources/monitoring/podMonitor.yaml -n istio-ingress
 ```
 
 Set up Kiali
 ------------
 Create cluster role binding for kiali to be able to read ocp monitoring
 ```bash
-oc apply -f ./resources/Kiali/kialiCrb.yaml -n istio-system
+oc apply -f ./resources/kiali/kialiCrb.yaml -n istio-system
 ```
 Set up Kiali CR. The URL for Jaeger UI (which was exposed earlier) needs to be set to Kiali CR in `.spec.external_services.tracing.url`
 > **_NOTE:_**  In this example, the `.spec.version` is missing so the istio version is automatically set by Kiali operator. You can specify the version manually, but it must be one that is supported by the operator; otherwise, an error will appear in events on the Kiali resource.
 ```bash
 export TRACING_INGRESS_ROUTE="http://$(oc get -n tracing-system route tracing-ui -o jsonpath='{.spec.host}')"
-cat ./resources/Kiali/kialiCr.yaml | JAEGERROUTE="${TRACING_INGRESS_ROUTE}" envsubst | oc -n istio-system apply -f -
+cat ./resources/kiali/kialiCr.yaml | JAEGERROUTE="${TRACING_INGRESS_ROUTE}" envsubst | oc -n istio-system apply -f -
 oc wait --for condition=Successful kiali/kiali --timeout 150s -n istio-system 
 ```
 Increase timeout for the Kiali ui route in OCP since big queries for spans can take longer
@@ -187,7 +231,7 @@ oc annotate route kiali haproxy.router.openshift.io/timeout=60s -n istio-system
 Optionally, OSSMC plugin can be installed as well
 > **_NOTE:_**  In this example, the `.spec.version` is missing so the istio version is automatically set by Kiali operator. You can specify the version manually, but it must be one that is supported by the operator and the version needs to be **the same as Kiali CR**.
 ```bash
-oc apply -f ./resources/Kiali/kialiOssmcCr.yaml -n istio-system
+oc apply -f ./resources/kiali/kialiOssmcCr.yaml -n istio-system
 oc wait -n istio-system --for=condition=Successful OSSMConsole ossmconsole --timeout 120s
 ```
 
@@ -218,7 +262,7 @@ oc label namespace bookinfo istio-injection=enabled
 ```
 Create pod monitor for bookinfo namespaces
 ```bash
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n bookinfo
+oc apply -f ./resources/monitoring/podMonitor.yaml -n bookinfo
 ```
 > **_NOTE(shortcut):_**  It takes some time till pod monitor shows in Metrics targets, you can check it in OCP console Observe->Targets. The Kiali UI will not show the metrics till the targets are ready.
  

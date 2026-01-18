@@ -125,7 +125,7 @@ oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 ```bash
 oc new-project my-app
 oc label namespace my-app istio-injection=enabled
-oc apply -f ./resources/Monitoring/podMonitor.yaml -n my-app
+oc apply -f ./resources/monitoring/podMonitor.yaml -n my-app
 ```
 
 **Apply Gateway API resources:**
