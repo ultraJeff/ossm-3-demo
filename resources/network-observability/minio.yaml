@@ -1,0 +1,96 @@
+# MinIO object storage for Loki
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-minio-pvc
+  namespace: netobserv
+  labels:
+    app: loki-minio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki-minio
+  namespace: netobserv
+spec:
+  selector:
+    matchLabels:
+      app: loki-minio
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: loki-minio
+    spec:
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: loki-minio-pvc
+      initContainers:
+        - name: create-buckets
+          image: busybox:1.28
+          command:
+            - "sh"
+            - "-c"
+            - "mkdir -p /storage/loki-data"
+          volumeMounts:
+            - name: storage
+              mountPath: "/storage"
+      containers:
+        - name: minio
+          image: minio/minio
+          args:
+            - server
+            - /storage
+            - --console-address
+            - ":9001"
+          env:
+            - name: MINIO_ROOT_USER
+              value: "loki"
+            - name: MINIO_ROOT_PASSWORD
+              value: "lokisecret"
+          ports:
+            - containerPort: 9000
+            - containerPort: 9001
+          volumeMounts:
+            - name: storage
+              mountPath: "/storage"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki-minio
+  namespace: netobserv
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9000
+      targetPort: 9000
+      protocol: TCP
+      name: api
+    - port: 9001
+      targetPort: 9001
+      protocol: TCP
+      name: console
+  selector:
+    app: loki-minio
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: loki-s3-secret
+  namespace: netobserv
+type: Opaque
+stringData:
+  endpoint: http://loki-minio.netobserv.svc.cluster.local:9000
+  bucketnames: loki-data
+  access_key_id: loki
+  access_key_secret: lokisecret
+

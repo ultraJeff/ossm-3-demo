@@ -1,0 +1,59 @@
+# FlowCollector - Main configuration for Network Observability
+# Enables network flow collection, Loki storage, and console integration
+apiVersion: flows.netobserv.io/v1beta2
+kind: FlowCollector
+metadata:
+  name: cluster
+spec:
+  namespace: netobserv
+  deploymentModel: Direct
+  agent:
+    type: eBPF
+    ebpf:
+      # Enable privilege mode for full network visibility
+      privileged: true
+      # Sample all packets (1 = 100%)
+      sampling: 1
+      # Features to enable
+      features:
+        - DNSTracking
+        - FlowRTT
+        - PacketDrop
+  processor:
+    # Enable Kubernetes enrichment
+    addZone: true
+    # Multi-cluster support (optional)
+    multiClusterDeployment: false
+  loki:
+    # Point to our LokiStack
+    mode: LokiStack
+    lokiStack:
+      name: netobserv-loki
+      namespace: netobserv
+  consolePlugin:
+    # Enable OpenShift console integration
+    register: true
+    # Quick filters for common queries
+    quickFilters:
+      - name: "Cluster external"
+        filter:
+          src_kind: "Pod"
+          dst_kind: '""'
+        default: false
+      - name: "Cluster internal"
+        filter:
+          src_kind: "Pod"
+          dst_kind: "Pod"
+        default: true
+      - name: "Ingress traffic"
+        filter:
+          dst_kind: "Pod"
+          src_kind: '""'
+        default: false
+      - name: "Inter-namespace"
+        filter:
+          src_kind: "Pod"
+          dst_kind: "Pod"
+          src_namespace: "!= DstK8S_Namespace"
+        default: false
+

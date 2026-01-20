@@ -10,6 +10,10 @@ resources:
 patchesStrategicMerge:
 - namespace-patch.yaml
 
-commonLabels:
-  app.kubernetes.io/part-of: bookinfo
-  service-mesh-mode: ambient
+# Note: Using 'labels' instead of 'commonLabels' to avoid adding labels to Service selectors
+# which would break pod matching (pods don't get these labels from Kustomize automatically)
+labels:
+- pairs:
+    app.kubernetes.io/part-of: bookinfo
+    service-mesh-mode: ambient
+  includeSelectors: false

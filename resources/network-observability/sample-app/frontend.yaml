@@ -1,0 +1,43 @@
+# Frontend tier - exposed via ingress
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: netpolicy-demo
+  labels:
+    app: frontend
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: quay.io/openshifttest/hello-openshift:1.2.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: RESPONSE
+              value: "Hello from Frontend! Calling backend..."
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: netpolicy-demo
+  labels:
+    app: frontend
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: frontend
+

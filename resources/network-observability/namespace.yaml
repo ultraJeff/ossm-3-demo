@@ -1,0 +1,6 @@
+# Namespace for Network Observability Loki
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: netobserv
+

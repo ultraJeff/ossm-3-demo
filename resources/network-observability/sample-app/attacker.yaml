@@ -1,0 +1,41 @@
+# Simulated "attacker" pod that tries to bypass network policies
+# This will generate BLOCKED traffic visible in Network Observability
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: attacker
+  namespace: netpolicy-demo
+  labels:
+    app: attacker
+    tier: attacker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: attacker
+  template:
+    metadata:
+      labels:
+        app: attacker
+        tier: attacker
+    spec:
+      containers:
+        - name: attacker
+          image: quay.io/curl/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting attack simulation..."
+              while true; do
+                # Try to access backend directly (should be blocked by network policy)
+                echo "$(date): Attempting direct backend access (should FAIL)..."
+                curl -s --connect-timeout 2 http://backend.netpolicy-demo.svc.cluster.local:8080 && echo "WARNING: Backend accessible!" || echo "BLOCKED: As expected"
+                sleep 5
+                
+                # Try to access database directly (should be blocked by network policy)
+                echo "$(date): Attempting direct database access (should FAIL)..."
+                curl -s --connect-timeout 2 http://database.netpolicy-demo.svc.cluster.local:8080 && echo "WARNING: Database accessible!" || echo "BLOCKED: As expected"
+                sleep 10
+              done
+

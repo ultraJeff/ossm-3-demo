@@ -1,0 +1,43 @@
+# Backend API tier - only accessible from frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: netpolicy-demo
+  labels:
+    app: backend
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: backend
+    spec:
+      containers:
+        - name: backend
+          image: quay.io/openshifttest/hello-openshift:1.2.0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: RESPONSE
+              value: "Hello from Backend API! Calling database..."
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: netpolicy-demo
+  labels:
+    app: backend
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: backend
+

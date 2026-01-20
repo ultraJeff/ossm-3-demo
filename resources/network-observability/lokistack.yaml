@@ -1,0 +1,19 @@
+# LokiStack for Network Observability flow logs
+apiVersion: loki.grafana.com/v1
+kind: LokiStack
+metadata:
+  name: netobserv-loki
+  namespace: netobserv
+spec:
+  size: 1x.demo
+  storage:
+    schemas:
+      - version: v13
+        effectiveDate: "2024-10-01"
+    secret:
+      name: loki-s3-secret
+      type: s3
+  storageClassName: gp3-csi
+  tenants:
+    mode: openshift-network
+

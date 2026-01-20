@@ -1,0 +1,9 @@
+# Sample multi-tier application namespace for network observability demo
+# Note: NOT part of service mesh to demonstrate pure Kubernetes NetworkPolicy
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: netpolicy-demo
+  labels:
+    app.kubernetes.io/part-of: netpolicy-demo
+
