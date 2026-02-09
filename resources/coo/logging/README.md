@@ -63,12 +63,15 @@ This directory contains resources to deploy OpenShift Logging with LokiStack for
 ### Step 1: Install Operators
 
 ```bash
-# Apply operator subscriptions (includes namespace creation)
+# Apply logging operator subscriptions
 oc apply -k resources/operators/overlays/logging
 
 # Wait for operators
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/loki-operator -n openshift-operators-redhat --timeout=120s
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/cluster-logging -n openshift-logging --timeout=120s
+
+# Also install COO for the Logging UIPlugin (Observe → Logs)
+oc apply -k resources/operators/overlays/coo
 ```
 
 ### Step 2: Deploy MinIO Storage
@@ -178,10 +181,6 @@ oc get pods -n openshift-logging -l app.kubernetes.io/instance=logging-loki
 ## Cleanup
 
 ```bash
-oc delete -f resources/logging/clusterlogforwarder.yaml
-oc delete -f resources/logging/lokistack.yaml
-oc delete -f resources/logging/minio.yaml
-oc delete -f resources/logging/operators.yaml
-oc delete -f resources/logging/namespace.yaml
+oc delete -k resources/coo/logging
 ```
 

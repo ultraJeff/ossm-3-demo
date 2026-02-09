@@ -1,0 +1,42 @@
+# Traffic generator to simulate real traffic patterns
+# Generates traffic between tiers to populate Network Observability dashboards
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-generator
+  namespace: netpolicy-demo
+  labels:
+    app: traffic-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-generator
+  template:
+    metadata:
+      labels:
+        app: traffic-generator
+    spec:
+      containers:
+        - name: generator
+          image: quay.io/curl/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Starting traffic generator..."
+              while true; do
+                # Simulate normal traffic: frontend -> backend -> database
+                echo "$(date): Calling frontend..."
+                curl -s http://frontend.netpolicy-demo.svc.cluster.local:8080 || echo "Frontend failed"
+                sleep 1
+                
+                echo "$(date): Calling backend (should work from here)..."
+                curl -s http://backend.netpolicy-demo.svc.cluster.local:8080 || echo "Backend failed"
+                sleep 1
+                
+                echo "$(date): Calling database (should work from here)..."
+                curl -s http://database.netpolicy-demo.svc.cluster.local:8080 || echo "Database failed"
+                sleep 3
+              done
+

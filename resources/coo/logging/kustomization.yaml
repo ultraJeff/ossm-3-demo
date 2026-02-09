@@ -4,6 +4,8 @@ kind: Kustomization
 # Logging infrastructure
 # Note: Operators must be installed separately first:
 #   oc apply -k resources/operators/overlays/logging
+# Then deploy COO for the Logging UIPlugin:
+#   oc apply -k resources/operators/overlays/coo
 
 resources:
 - namespace.yaml

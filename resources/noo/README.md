@@ -1,12 +1,11 @@
-# Network Observability Demo
+# Network Observability Operator (NOO) Demo
 
 This directory contains resources for the Red Hat OpenShift Network Observability Operator demo, showcasing network flow visualization and network policy management.
 
 ## Components
 
 ### Operators
-- **Loki Operator** (`loki-operator-subscription.yaml`) - Stores network flow logs
-- **Network Observability Operator** (`netobserv-operator-subscription.yaml`) - Collects and visualizes network flows
+Operators are installed separately via `resources/operators/overlays/noo/`
 
 ### Infrastructure
 - **MinIO** (`minio.yaml`) - S3-compatible object storage for Loki
@@ -41,7 +40,7 @@ The `sample-app/` directory contains a multi-tier application demonstrating netw
 
 ### 1. Install Operators
 ```bash
-oc apply -k resources/operators/overlays/network-observability
+oc apply -k resources/operators/overlays/noo
 
 # Wait for operators
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/loki-operator -n openshift-operators-redhat --timeout=120s
@@ -50,20 +49,20 @@ oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/netobserv-op
 
 ### 2. Deploy Infrastructure
 ```bash
-oc apply -f resources/network-observability/namespace.yaml
-oc apply -f resources/network-observability/minio.yaml
+oc apply -f resources/noo/namespace.yaml
+oc apply -f resources/noo/minio.yaml
 oc wait --for=condition=Available deployment/loki-minio -n netobserv --timeout=120s
 
-oc apply -f resources/network-observability/lokistack.yaml
+oc apply -f resources/noo/lokistack.yaml
 # Wait for LokiStack to be ready
 oc wait --for=condition=Ready lokistack/netobserv-loki -n netobserv --timeout=300s
 
-oc apply -f resources/network-observability/flowcollector.yaml
+oc apply -f resources/noo/flowcollector.yaml
 ```
 
 ### 3. Deploy Sample Application
 ```bash
-oc apply -k resources/network-observability/sample-app
+oc apply -k resources/noo/sample-app
 ```
 
 ## Viewing Network Flows
@@ -107,10 +106,10 @@ The demo includes these policies:
 ## Cleanup
 
 ```bash
-oc delete -k resources/network-observability/sample-app
+oc delete -k resources/noo/sample-app
 oc delete flowcollector cluster
 oc delete lokistack netobserv-loki -n netobserv
-oc delete -f resources/network-observability/minio.yaml
+oc delete -f resources/noo/minio.yaml
 oc delete namespace netobserv
 ```
 

@@ -1,0 +1,8 @@
+# TroubleshootingPanel UIPlugin - Korrel8r-powered troubleshooting sidebar
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: troubleshooting-panel
+spec:
+  type: TroubleshootingPanel
+

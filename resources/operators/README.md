@@ -7,7 +7,7 @@ This directory contains all operator subscriptions for the OSSM3 demo, organized
 ```
 operators/
 ├── base/
-│   └── loki-operator-namespace.yaml   # Shared by network-observability and logging
+│   └── loki-operator-namespace.yaml   # Shared by noo and logging
 └── overlays/
     ├── core/                          # Required for OSSM3 demo
     │   ├── namespaces.yaml
@@ -15,7 +15,7 @@ operators/
     ├── coo/                           # Cluster Observability Operator
     │   ├── namespace.yaml
     │   └── subscription.yaml
-    ├── network-observability/         # Network flow visualization
+    ├── noo/                           # Network Observability Operator
     │   ├── loki-operator-subscription.yaml
     │   └── netobserv-operator-subscription.yaml
     └── logging/                       # Cluster logging
@@ -44,7 +44,7 @@ oc apply -k resources/operators/overlays/coo
 Adds network flow visualization (eBPF-based)
 
 ```bash
-oc apply -k resources/operators/overlays/network-observability
+oc apply -k resources/operators/overlays/noo
 ```
 
 ### Install Logging Operators (Optional)
@@ -68,7 +68,7 @@ oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/opentelemetr
 # COO
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/cluster-observability-operator -n openshift-cluster-observability-operator --timeout=120s
 
-# Network Observability
+# NOO (Network Observability Operator)
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/loki-operator -n openshift-operators-redhat --timeout=120s
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/netobserv-operator -n openshift-operators --timeout=120s
 
@@ -78,5 +78,5 @@ oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/cluster-logg
 
 ## Notes
 
-- **Loki Operator** is shared between network-observability and logging overlays. If you install both, the second install will simply confirm the existing resources.
+- **Loki Operator** is shared between noo and logging overlays. If you install both, the second install will simply confirm the existing resources.
 - After installing operators, you still need to deploy the corresponding custom resources (e.g., `oc apply -k resources/coo` for MonitoringStack and UIPlugins).

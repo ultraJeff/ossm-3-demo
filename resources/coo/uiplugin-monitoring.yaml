@@ -1,0 +1,15 @@
+# Monitoring UIPlugin - Enhanced monitoring with ACM alertmanager support
+apiVersion: observability.openshift.io/v1alpha1
+kind: UIPlugin
+metadata:
+  name: monitoring
+spec:
+  type: Monitoring
+  monitoring:
+    acm:
+      enabled: true
+      alertmanager:
+        url: https://service-mesh-monitoring-alertmanager.coo-service-mesh.svc.cluster.local:9093
+      thanosQuerier:
+        url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
+
