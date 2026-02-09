@@ -8,4 +8,7 @@ resources:
   - servicemonitor-istiod.yaml
   - uiplugin-tracing.yaml
   - uiplugin-logging.yaml
+  - uiplugin-dashboards.yaml
+  - uiplugin-monitoring.yaml
+  - uiplugin-troubleshooting-panel.yaml
 

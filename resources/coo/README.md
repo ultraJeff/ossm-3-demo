@@ -16,15 +16,13 @@ The Cluster Observability Operator provides a way to deploy and manage Prometheu
 ### Step 1: Install the COO Operator
 
 ```bash
-oc apply -f resources/coo/subscription.yaml
+oc apply -k resources/operators/overlays/coo
 ```
 
 Wait for the operator to be ready:
 ```bash
-until oc get pods -n openshift-cluster-observability-operator | grep -E "observability.*Running"; do
-  echo "Waiting for COO operator..."
-  sleep 10
-done
+oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/cluster-observability-operator -n openshift-cluster-observability-operator --timeout=120s
+oc wait --for=condition=Ready pods --all -n openshift-cluster-observability-operator --timeout=180s
 ```
 
 ### Step 2: Label Service Mesh Namespaces
@@ -59,6 +57,9 @@ echo "Prometheus UI: http://$(oc get route prometheus-coo -n coo-service-mesh -o
 | ServiceMonitor (istiod) | coo-service-mesh | Scrapes Istiod control plane metrics |
 | UIPlugin (distributed-tracing) | cluster-scoped | Adds **Observe → Traces** to console |
 | UIPlugin (logging) | cluster-scoped | Adds **Observe → Logs** to console |
+| UIPlugin (dashboards) | cluster-scoped | Adds custom dashboard support (Perses) |
+| UIPlugin (monitoring) | cluster-scoped | Enhanced **Observe → Alerting** with ACM support |
+| UIPlugin (troubleshooting-panel) | cluster-scoped | Korrel8r-powered troubleshooting sidebar |
 
 ## Available Metrics
 
@@ -139,6 +140,46 @@ The logging UI plugin adds **Observe → Logs** to the OpenShift Console.
 1. Install the Loki Operator from OperatorHub
 2. Deploy a LokiStack in `openshift-logging` namespace
 3. Configure cluster logging to forward logs to Loki
+
+### Dashboards Plugin
+
+The dashboards UI plugin adds custom dashboard support via Perses to the OpenShift Console.
+
+**Features:**
+- Create and manage custom dashboards
+- Perses-based dashboard format
+- Integration with Prometheus data sources
+
+**Usage:**
+1. Navigate to **Observe → Dashboards** in the OpenShift Console
+2. Create or import dashboards
+
+### Monitoring Plugin
+
+The monitoring UI plugin provides enhanced alerting capabilities with ACM (Advanced Cluster Management) support.
+
+**Configuration:**
+- Connects to AlertManager at `service-mesh-monitoring-alertmanager.coo-service-mesh.svc.cluster.local:9093`
+- Connects to Thanos Querier at `thanos-querier.openshift-monitoring.svc.cluster.local:9091`
+
+**Features:**
+- Enhanced alerting UI in **Observe → Alerting**
+- Multi-cluster alerting support (with ACM)
+- Integration with MonitoringStack AlertManager
+
+### Troubleshooting Panel Plugin
+
+The troubleshooting panel adds a Korrel8r-powered sidebar to resource pages.
+
+**Features:**
+- Click the lightbulb icon on any resource page
+- Automatically correlates related resources (pods, services, logs, alerts)
+- Helps quickly identify related issues across the cluster
+
+**Usage:**
+1. Navigate to any resource (Pod, Deployment, Service, etc.)
+2. Click the lightbulb icon in the top-right corner
+3. View correlated resources and signals
 
 ## Documentation
 

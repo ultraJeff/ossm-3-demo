@@ -13,7 +13,7 @@ BBlue='\033[1;34m'    # Blue
 echo "This script installs operators from OperatorHub"
 echo "This script will also enable the Kubernetes Gateway API" #This may be an unessessary step in future OCP
 
-oc apply -f ./resources/subscriptions.yaml
+oc apply -k ./resources/operators/overlays/core
 echo "Waiting till all operators pods are ready"
 until oc get pods -n openshift-operators | grep servicemesh-operator3 | grep Running; do echo "Waiting for servicemesh-operator3 to be running."; sleep 10;done
 until oc get pods -n openshift-operators | grep kiali-operator | grep Running; do echo "Waiting for kiali-operator to be running."; sleep 10;done

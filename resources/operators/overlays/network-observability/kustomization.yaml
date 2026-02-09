@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Network Observability Operator
+# Requires: Loki Operator for flow log storage
+# Provides: FlowCollector, network flow visualization in console
+
+resources:
+  - ../../base/loki-operator-namespace.yaml
+  - loki-operator-subscription.yaml
+  - netobserv-operator-subscription.yaml

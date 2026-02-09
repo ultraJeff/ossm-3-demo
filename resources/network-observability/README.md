@@ -41,8 +41,7 @@ The `sample-app/` directory contains a multi-tier application demonstrating netw
 
 ### 1. Install Operators
 ```bash
-oc apply -f resources/network-observability/loki-operator-subscription.yaml
-oc apply -f resources/network-observability/netobserv-operator-subscription.yaml
+oc apply -k resources/operators/overlays/network-observability
 
 # Wait for operators
 oc wait --for=jsonpath='{.status.state}'=AtLatestKnown subscription/loki-operator -n openshift-operators-redhat --timeout=120s

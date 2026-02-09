@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Logging Operators
+# Includes: Loki Operator, Cluster Logging Operator
+# Provides: LokiStack, ClusterLogForwarder
+
+resources:
+  - ../../base/loki-operator-namespace.yaml
+  - logging-namespace.yaml
+  - loki-operator-subscription.yaml
+  - cluster-logging-subscription.yaml

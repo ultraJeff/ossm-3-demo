@@ -4,7 +4,7 @@
   gather_facts: no
 
   vars:
-    subscriptions_file: "./resources/subscriptions.yaml"
+    operators_overlay: "./resources/operators/overlays/core"
     namespace: "openshift-operators"
     operators:
       - "servicemesh-operator3"
@@ -13,10 +13,11 @@
       - "tempo-operator"
 
   tasks:
-    - name: Apply subscriptions YAML file
-      kubernetes.core.k8s:
-        state: present
-        definition: "{{ lookup('file', subscriptions_file) }}"
+    - name: Apply operator subscriptions via kustomize
+      ansible.builtin.command:
+        cmd: "oc apply -k {{ operators_overlay }}"
+      register: apply_result
+      changed_when: "'created' in apply_result.stdout or 'configured' in apply_result.stdout"
 
     - name: Wait for operators to be running
       block:

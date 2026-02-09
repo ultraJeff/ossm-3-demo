@@ -24,7 +24,7 @@ By the end of this quickstart, you will have installed OSSM3, where tracing info
 > The Bookinfo app has three different modes that let you choose between Service Mesh 2.x, Service Mesh 3 Sidecar or Service Mesh 3 Ambient mode deployments
 
 ## Prerequisites
-- The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install it by `./install_operators.sh` script which installs the particular operator versions (see subscriptions.yaml))
+- The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install them by `./install_operators.sh` script which uses `resources/operators/overlays/core/`)
 - The above listed script also enables the `Gateway API`, which will be included with OCP in a future release (TBD)
 - The cluster that has available Persistent Volumes or supports dynamic provisioning storage (for installing MiniO)
 - You are logged into OpenShift via the CLI
