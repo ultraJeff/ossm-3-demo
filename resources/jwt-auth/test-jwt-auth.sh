@@ -48,7 +48,7 @@ if [ -z "$GATEWAY" ]; then
         echo "   ./install_ossm3_demo.sh"
         echo ""
         echo "2. Deployed the RestAPI application:"
-        echo "   oc apply -k ./resources/application/kustomize/overlays/pod"
+        echo "   oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod"
         echo ""
         echo "3. Created the gateway:"
         echo "   oc apply -k ./resources/gateway"

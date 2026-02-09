@@ -135,7 +135,7 @@ oc apply -k ./resources/gateway
 
 **Deploy custom Kustomize applications:**
 ```bash
-oc apply -k ./resources/application/kustomize/overlays/pod
+oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod
 ```
 
 ## File Structure Notes

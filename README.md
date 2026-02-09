@@ -285,7 +285,7 @@ Set up sample RestAPI
 
 Install the sample RestAPI `hello-service` via Kustomize
 ```bash
-oc apply -k ./resources/application/kustomize/overlays/pod 
+oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod 
 ```
 
 Optional: Enable JWT Authentication for RestAPI

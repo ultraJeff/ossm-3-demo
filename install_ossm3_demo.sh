@@ -84,7 +84,7 @@ echo "Install Kiali OSSM Console plugin..."
 oc apply -f ./resources/kiali/kialiOssmcCr.yaml -n istio-system
 
 echo "Installing Sample RestAPI..."
-oc apply -k ./resources/application/kustomize/overlays/pod 
+oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod 
 
 echo "Installing Bookinfo (SM3 Sidecar)..."
 oc apply -k ./resources/bookinfo/overlays/traditional

@@ -210,7 +210,7 @@
       kubernetes.core.k8s:
         state: present
         namespace: "{{ namespace_sample_restapi }}"
-        definition: "{{ lookup('file', './resources/application/kustomize/overlays/pod.yaml') }}"
+        definition: "{{ lookup('file', './resources/rest-api-demo/kustomize/overlays/pod.yaml') }}"
 
     - name: Display installation completion message
       debug:
