@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector-tempo
+  namespace: opentelemetrycollector
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-tempo-traces-writer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: tempostack-traces-writer
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-tempo
+    namespace: opentelemetrycollector

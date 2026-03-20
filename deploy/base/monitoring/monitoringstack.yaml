@@ -1,0 +1,17 @@
+apiVersion: monitoring.rhobs/v1alpha1
+kind: MonitoringStack
+metadata:
+  name: service-mesh-monitoring
+  namespace: coo-service-mesh
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  logLevel: info
+  retention: 24h
+  createClusterRoleBindings: CreateClusterRoleBindings
+  namespaceSelector:
+    matchLabels:
+      monitoring.rhobs/stack: service-mesh
+  resourceSelector: {}
+  prometheusConfig:
+    replicas: 1

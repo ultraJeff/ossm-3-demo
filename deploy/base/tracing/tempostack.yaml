@@ -1,0 +1,30 @@
+# OSSM-specific TempoStack with gateway enabled for COO tracing UI
+# The S3 storage secret (my-storage-secret) is provided by the overlay
+apiVersion: tempo.grafana.com/v1alpha1
+kind: TempoStack
+metadata:
+  name: sample
+  namespace: tracing-system
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  storage:
+    secret:
+      name: my-storage-secret
+      type: s3
+  storageSize: 1Gi
+  retention:
+    global:
+      traces: 48h
+  replicationFactor: 1
+  template:
+    gateway:
+      enabled: true
+      rbac:
+        enabled: false
+    queryFrontend:
+      jaegerQuery:
+        enabled: false
+    distributor:
+      tls:
+        enabled: false

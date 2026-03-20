@@ -1,0 +1,44 @@
+# OSSM OTel Collector with bearer token auth to TempoStack gateway
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+  namespace: opentelemetrycollector
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  serviceAccount: otel-collector-tempo
+  config:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    extensions:
+      bearertokenauth:
+        filename: /var/run/secrets/kubernetes.io/serviceaccount/token
+    exporters:
+      otlp:
+        endpoint: "tempo-sample-gateway.tracing-system.svc.cluster.local:8090"
+        headers:
+          X-Scope-OrgID: dev
+        tls:
+          ca_file: /etc/tempo-ca/ca.crt
+        auth:
+          authenticator: bearertokenauth
+    service:
+      extensions: [bearertokenauth]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: []
+          exporters: [otlp]
+  volumes:
+    - name: tempo-ca
+      configMap:
+        name: tempo-ca
+  volumeMounts:
+    - name: tempo-ca
+      mountPath: /etc/tempo-ca

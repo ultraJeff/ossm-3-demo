@@ -1,0 +1,11 @@
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  tracing:
+  - providers:
+    - name: otel
+      randomSamplingPercentage: 100
