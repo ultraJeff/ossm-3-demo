@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# East site: exposes the local Quarkus REST API backend
+# for consumption by the west site via Service Interconnect
+
+resources:
+  - ../../base
+  - connector.yaml

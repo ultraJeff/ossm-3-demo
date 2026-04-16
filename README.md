@@ -40,6 +40,7 @@ The quickstart
   * installs bookinfo app with traffic generator in `bookinfo` namespace
   * installs RestAPI app in `rest-api-with-mesh` namespace
   * (For ambient mode) installs ztunnel to `ztunnel` namespace
+  * (Optional) installs Service Interconnect site in `skupper-site` namespace
 
 ## Configuration Structure
 The configurations are organized using Kustomize overlays for maximum flexibility:
@@ -53,6 +54,11 @@ The configurations are organized using Kustomize overlays for maximum flexibilit
 - `resources/tempootel/base/` - Common resources (MinIO, Telemetry)
 - `resources/tempootel/overlays/kiali/` - Kiali-optimized (Jaeger UI, no gateway)
 - `resources/tempootel/overlays/coo/` - COO-optimized (gateway, multi-tenant for Observe → Traces)
+
+### Service Interconnect (Skupper 2.0)
+- `resources/service-interconnect/base/` - Common resources (Site, namespace)
+- `resources/service-interconnect/overlays/east/` - Provider site (Connector for REST API backend)
+- `resources/service-interconnect/overlays/west/` - Consumer site (Listener for remote services)
 
 ### Console Banner
 - `resources/console-banner/overlays/traditional/` - Green banner for sidecar mode
@@ -307,6 +313,38 @@ oc apply -k ./resources/jwt-auth/overlays/demo
 - **Custom Provider**: Modify `resources/jwt-auth/base/` with your JWKS endpoint
 
 For detailed JWT configuration and testing, see `resources/jwt-auth/README.md`
+
+Optional: Red Hat Service Interconnect (Multi-Cluster Connectivity)
+------------
+Connect services across multiple OpenShift clusters using Red Hat Service Interconnect (Skupper 2.0).
+
+### Install the Operator
+```bash
+oc apply -k ./resources/operators/overlays/service-interconnect
+```
+
+### Deploy a Site
+```bash
+# On the provider cluster (east) - exposes the REST API backend
+oc apply -k ./resources/service-interconnect/overlays/east
+
+# On the consumer cluster (west) - creates proxy services
+oc apply -k ./resources/service-interconnect/overlays/west
+```
+
+For the full multi-cluster linking workflow (AccessGrant, AccessToken, verification), see `resources/service-interconnect/README.md`
+
+Ambient Mode: Health Checks and OVN-Kubernetes
+------------
+When using ambient mode, OVN-Kubernetes must be configured with local gateway mode (`routingViaHost: true`) **before** installing the mesh. This is a cluster-wide change that affects all pod egress traffic.
+
+```bash
+oc patch network.operator.openshift.io cluster \
+  --type=merge \
+  --patch='{"spec":{"defaultNetwork":{"ovnKubernetesConfig":{"gatewayConfig":{"routingViaHost":true}}}}}'
+```
+
+> **Warning**: This changes the egress path for all pods on the cluster, not just meshed ones. See `docs/ambient-health-checks.md` for a detailed analysis of the implications, known issues with health check probes in ambient mode, and troubleshooting guidance.
 
 Test that everything works correctly
 ------------

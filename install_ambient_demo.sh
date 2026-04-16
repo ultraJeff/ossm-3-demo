@@ -28,6 +28,32 @@ echo -e "${BYellow}Logged in as: $(oc whoami)${NC}"
 echo -e "${BYellow}Cluster: $(oc whoami --show-server)${NC}"
 echo ""
 
+# Check routingViaHost prerequisite for ambient mode
+# Ambient mode requires OVN-Kubernetes local gateway mode (routingViaHost: true)
+# because ztunnel intercepts traffic via iptables rules in the host kernel.
+# See docs/ambient-health-checks.md for details on implications and health check behavior.
+echo -e "${BYellow}Checking OVN-Kubernetes gateway configuration...${NC}"
+ROUTING_VIA_HOST=$(oc get network.operator.openshift.io cluster -o jsonpath='{.spec.defaultNetwork.ovnKubernetesConfig.gatewayConfig.routingViaHost}' 2>/dev/null)
+if [ "$ROUTING_VIA_HOST" != "true" ]; then
+    echo -e "${BRed}WARNING: routingViaHost is not enabled (current: ${ROUTING_VIA_HOST:-not set}).${NC}"
+    echo -e "${BRed}Ambient mode requires routingViaHost: true in the Cluster Network Operator.${NC}"
+    echo -e "${BYellow}To enable it, run:${NC}"
+    echo "  oc patch network.operator.openshift.io cluster --type=merge \\"
+    echo "    --patch='{\"spec\":{\"defaultNetwork\":{\"ovnKubernetesConfig\":{\"gatewayConfig\":{\"routingViaHost\":true}}}}}'"
+    echo ""
+    echo -e "${BYellow}Then wait for the OVN-Kubernetes rollout to complete:${NC}"
+    echo "  oc rollout status daemonset/ovnkube-node -n openshift-ovn-kubernetes"
+    echo ""
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+else
+    echo -e "${BGreen}routingViaHost is enabled${NC}"
+fi
+echo ""
+
 # ============================================
 # Install Tracing Infrastructure
 # ============================================
