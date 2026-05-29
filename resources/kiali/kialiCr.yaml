@@ -42,7 +42,7 @@ spec:
     tracing:
       enabled: true
       internal_url: "http://tempo-sample-query-frontend.tracing-system.svc.cluster.local:3200"
-      external_url: ${JAEGERROUTE} 
+      external_url: ""
       query_timeout: 60
       use_grpc: false
       provider: tempo

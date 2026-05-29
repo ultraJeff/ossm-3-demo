@@ -9,3 +9,4 @@ resources:
 - ../../base
 - operators
 - s3-secret.yaml
+- ../../../resources/kiali
