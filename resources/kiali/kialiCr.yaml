@@ -40,7 +40,7 @@ spec:
       url: 'https://thanos-querier.openshift-monitoring.svc.cluster.local:9091'
     tracing:
       enabled: true
-      internal_url: "http://tempo-sample-gateway.tracing-system.svc.cluster.local:8080"
+      internal_url: "http://tempo-sample-gateway.tracing-system.svc.cluster.local:8080/api/traces/v1/application"
       external_url: ""
       query_timeout: 60
       use_grpc: false
