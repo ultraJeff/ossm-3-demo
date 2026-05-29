@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
 - istio-system-namespace.yaml
+- istio-cni-namespace.yaml
 - ztunnel-namespace.yaml
 - istiocr.yaml
 - istiocni.yaml
