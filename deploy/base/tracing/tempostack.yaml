@@ -17,9 +17,18 @@ spec:
     global:
       traces: 48h
   replicationFactor: 1
+  tenants:
+    mode: openshift
+    authentication:
+    - tenantName: application
+      tenantId: application
   template:
     gateway:
       enabled: true
+      ingress:
+        route:
+          termination: reencrypt
+        type: route
       rbac:
         enabled: false
     queryFrontend:
