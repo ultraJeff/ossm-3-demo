@@ -5,5 +5,9 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
-  profile: ambient
   namespace: istio-cni
+  values:
+    cni:
+      ambient:
+        reconcileIptablesOnStartup: true
+  profile: ambient
