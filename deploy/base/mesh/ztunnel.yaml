@@ -1,4 +1,4 @@
-apiVersion: sailoperator.io/v1alpha1
+apiVersion: sailoperator.io/v1
 kind: ZTunnel
 metadata:
   name: default
@@ -6,4 +6,4 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   namespace: ztunnel
-  profile: ambient
+  version: v1.28.8
