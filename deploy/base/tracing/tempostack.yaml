@@ -15,7 +15,7 @@ spec:
   storageSize: 1Gi
   retention:
     global:
-      traces: 48h
+      traces: 48h0m0s
   replicationFactor: 1
   tenants:
     mode: openshift
