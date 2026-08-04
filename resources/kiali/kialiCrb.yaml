@@ -10,3 +10,28 @@ subjects:
 - kind: ServiceAccount
   name: kiali-service-account
   namespace: istio-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kiali-tempo-traces-reader
+rules:
+- apiGroups:
+  - tempo.grafana.com
+  resources:
+  - application
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kiali-tempo-traces-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kiali-tempo-traces-reader
+subjects:
+- kind: ServiceAccount
+  name: kiali-service-account
+  namespace: istio-system
