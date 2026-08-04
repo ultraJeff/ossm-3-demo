@@ -7,3 +7,4 @@ resources:
   - ../../base
   - namespace.yaml
   - waypoint.yaml
+  - pod-monitor.yaml

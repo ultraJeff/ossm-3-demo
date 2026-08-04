@@ -871,11 +871,12 @@ spec:
             port:
               number: 80
       retries:
-        attempts: 3
-        retryOn: 5xx,reset,connect-failure,retriable-status-codes
+        attempts: 5
+        perTryTimeout: 3s
+        retryOn: "5xx"
 EOF2
 echo ''
-echo 'Applied: HTTPRoute (5s timeout) + VirtualService (3x retries on 5xx)'
+echo 'Applied: HTTPRoute (5s timeout) + VirtualService (5x retries on 5xx)'
 echo 'HTTPRoute handles timeouts natively. Retries require VirtualService'
 echo 'until Gateway API adds retry support to the spec.'`);
   res.json(result);
@@ -911,28 +912,28 @@ fi`);
 });
 
 app.post('/api/test-unstable', async (req, res) => {
-  const result = await run(`echo '$ curl http://httpbin.ossm-httpbin.svc/unstable  (x10)'
-echo '  (httpbin returns 500 ~50% of the time -- simulates a flaky backend)'
+  const result = await run(`echo '$ curl http://httpbin.ossm-httpbin.svc/unstable  (x50)'
+echo '  (httpbin returns 500 ~50% of the time)'
 echo ''
 PASS=0; FAIL=0
-for i in $(seq 1 10); do
+for i in $(seq 1 50); do
   CODE=$(oc exec -n ossm-httpbin deploy/test-client -- curl -s -o /dev/null -w '%{http_code}' --connect-timeout 3 http://httpbin.ossm-httpbin.svc/unstable 2>/dev/null)
   if [ "$CODE" = "200" ]; then PASS=$((PASS+1)); printf "."; else FAIL=$((FAIL+1)); printf "X"; fi
 done
 echo ""
 echo ""
-echo "Results: $PASS succeeded, $FAIL failed out of 10"
+echo "Results: $PASS succeeded, $FAIL failed out of 50"
+PCT=$((PASS * 100 / 50))
+echo "Success rate: $PCT%"
 echo ""
-if [ "$FAIL" -gt 3 ]; then
-  echo "Many failures visible to the client. Apply the traffic policy --"
-  echo "it includes 3 automatic retries on 5xx errors. The waypoint will"
-  echo "retry failed requests before the client ever sees the error."
-elif [ "$FAIL" -eq 0 ]; then
-  echo "All passed. If the traffic policy is active, retries are absorbing"
-  echo "the ~50% failure rate behind the scenes -- the client sees 100% success."
+if [ "$FAIL" -gt 15 ]; then
+  echo "Without retries, the client sees the ~50% failure rate directly."
+  echo "Apply the traffic policy to enable automatic retries."
+elif [ "$FAIL" -le 3 ]; then
+  echo "Retries are absorbing failures. httpbin still fails ~50% internally"
+  echo "but the waypoint retries up to 5 times before the client sees an error."
 else
-  echo "Some failures. With the traffic policy active, retries should"
-  echo "absorb most of these."
+  echo "Some failures getting through. Retries are helping but not catching all."
 fi`);
   res.json(result);
 });
