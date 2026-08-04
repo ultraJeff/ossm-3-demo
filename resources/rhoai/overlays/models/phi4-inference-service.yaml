@@ -1,0 +1,25 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: phi-4-mini
+  namespace: ossm-ai-models
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    networking.kserve.io/visibility: exposed
+spec:
+  predictor:
+    nodeSelector:
+      kubernetes.io/hostname: tallgeese
+    model:
+      runtime: vllm-cpu-runtime
+      modelFormat:
+        name: vLLM
+      storageUri: oci://image-registry.openshift-image-registry.svc:5000/ossm-ai-models/phi-4-mini-modelcar:latest
+      resources:
+        requests:
+          cpu: "4"
+          memory: 16Gi
+        limits:
+          cpu: "8"
+          memory: 24Gi

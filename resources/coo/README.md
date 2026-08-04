@@ -9,7 +9,7 @@ The Cluster Observability Operator provides a way to deploy and manage Prometheu
 ## Prerequisites
 
 - OpenShift 4.14+
-- Service Mesh 3 deployed (traditional sidecar mode)
+- Service Mesh 3 deployed (ambient mode)
 
 ## Installation
 
@@ -31,8 +31,8 @@ Label the namespaces you want to monitor:
 ```bash
 oc label namespace istio-system monitoring.rhobs/stack=service-mesh
 oc label namespace istio-ingress monitoring.rhobs/stack=service-mesh
-oc label namespace bookinfo monitoring.rhobs/stack=service-mesh
-oc label namespace rest-api-with-mesh monitoring.rhobs/stack=service-mesh
+oc label namespace ossm-bookinfo monitoring.rhobs/stack=service-mesh
+oc label namespace ossm-restapi monitoring.rhobs/stack=service-mesh
 ```
 
 ### Step 3: Deploy the MonitoringStack
@@ -53,7 +53,7 @@ echo "Prometheus UI: http://$(oc get route prometheus-coo -n coo-service-mesh -o
 | Resource | Namespace | Purpose |
 |----------|-----------|---------|
 | MonitoringStack | coo-service-mesh | Deploys Prometheus + Alertmanager |
-| PodMonitor (istio-proxies) | coo-service-mesh | Scrapes Envoy sidecar metrics |
+| PodMonitor (istio-proxies) | coo-service-mesh | Scrapes Envoy proxy metrics |
 | ServiceMonitor (istiod) | coo-service-mesh | Scrapes Istiod control plane metrics |
 | UIPlugin (distributed-tracing) | cluster-scoped | Adds **Observe → Traces** to console |
 | UIPlugin (logging) | cluster-scoped | Adds **Observe → Logs** to console |
@@ -63,7 +63,7 @@ echo "Prometheus UI: http://$(oc get route prometheus-coo -n coo-service-mesh -o
 
 ## Available Metrics
 
-### Istio Traffic Metrics (from sidecars)
+### Istio Traffic Metrics (from proxies)
 - `istio_requests_total` - Total requests by source/destination
 - `istio_request_duration_milliseconds` - Request latency histogram
 - `istio_request_bytes` / `istio_response_bytes` - Request/response sizes
@@ -185,4 +185,3 @@ The troubleshooting panel adds a Korrel8r-powered sidebar to resource pages.
 
 - [Cluster Observability Operator Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_cluster_observability_operator/1-latest/html-single/installing_red_hat_openshift_cluster_observability_operator/index)
 - [UI Plugins Documentation](https://docs.redhat.com/en/documentation/red_hat_openshift_cluster_observability_operator/1-latest/html-single/ui_plugins_for_red_hat_openshift_cluster_observability_operator/index)
-

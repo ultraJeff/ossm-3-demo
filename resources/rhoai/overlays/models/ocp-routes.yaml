@@ -1,0 +1,29 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mesh-gateway-iris
+  namespace: istio-system
+spec:
+  host: iris-onnx.apps.tallgeese.ultra.lab
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: mesh-gateway-istio
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: mesh-gateway-phi4
+  namespace: istio-system
+spec:
+  host: phi4-mesh.apps.tallgeese.ultra.lab
+  port:
+    targetPort: https
+  tls:
+    termination: passthrough
+  to:
+    kind: Service
+    name: mesh-gateway-istio

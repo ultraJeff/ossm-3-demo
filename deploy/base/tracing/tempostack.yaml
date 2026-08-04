@@ -15,7 +15,13 @@ spec:
   storageSize: 1Gi
   retention:
     global:
-      traces: 48h0m0s
+      traces: 4h0m0s
+  limits:
+    global:
+      ingestion:
+        ingestionBurstSizeBytes: 1000000
+        ingestionRateLimitBytes: 500000
+        maxTracesPerUser: 1000
   replicationFactor: 1
   tenants:
     mode: openshift

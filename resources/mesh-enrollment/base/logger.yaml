@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mesh-logger-script
+data:
+  server.py: |
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import datetime, json
+
+    PINGS = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path == '/pings':
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps(PINGS[-50:]).encode())
+                return
+            if self.path == '/ping':
+                ts = datetime.datetime.now(datetime.timezone.utc).strftime('%H:%M:%S')
+                pod_name = self.headers.get('X-Pinger-Pod', 'unknown')
+                entry = {'time': ts, 'pod': pod_name}
+                PINGS.append(entry)
+                print(f"[{ts}] PING from {pod_name}", flush=True)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(entry).encode())
+                return
+            self.send_response(404)
+            self.end_headers()
+
+        def log_message(self, format, *args):
+            pass
+
+    print("Mesh Logger started on :8080", flush=True)
+    HTTPServer(('', 8080), Handler).serve_forever()
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesh-logger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesh-logger
+  template:
+    metadata:
+      labels:
+        app: mesh-logger
+    spec:
+      containers:
+        - name: logger
+          image: python:3.12-slim
+          command: ["python3", "/app/server.py"]
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: script
+              mountPath: /app
+      volumes:
+        - name: script
+          configMap:
+            name: mesh-logger-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mesh-logger
+spec:
+  selector:
+    app: mesh-logger
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http

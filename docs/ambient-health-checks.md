@@ -107,7 +107,7 @@ The REST API demo deployments use HTTP probes that need validation in ambient mo
 
 When deploying these in an ambient mesh namespace, monitor for probe failures:
 ```bash
-oc get events -n rest-api-with-mesh --field-selector reason=Unhealthy
+oc get events -n ossm-restapi --field-selector reason=Unhealthy
 ```
 
 #### Deployments Without Probes

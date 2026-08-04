@@ -4,6 +4,6 @@ kind: Namespace
 metadata:
   name: bookinfo-opa
   labels:
-    istio-injection: enabled
+    istio.io/dataplane-mode: ambient
+    # OPA external authorization still uses sidecar injection for the OPA filter
     opa-istio-injection: enabled
-

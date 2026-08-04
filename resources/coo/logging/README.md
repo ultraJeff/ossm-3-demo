@@ -138,10 +138,10 @@ EOF
 
 ### View bookinfo application logs
 - Log type: Application
-- Namespace: bookinfo
+- Namespace: ossm-bookinfo
 
 ### View service mesh control plane logs
-- Log type: Infrastructure  
+- Log type: Infrastructure
 - Namespace: istio-system
 
 ### View logs with errors
@@ -183,4 +183,3 @@ oc get pods -n openshift-logging -l app.kubernetes.io/instance=logging-loki
 ```bash
 oc delete -k resources/coo/logging
 ```
-

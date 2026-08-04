@@ -14,8 +14,8 @@ spec:
       operator: DoesNotExist
   namespaceSelector:
     matchNames:
-    - bookinfo
-    - rest-api-with-mesh
+    - ossm-bookinfo
+    - ossm-restapi
     - istio-ingress
   podMetricsEndpoints:
   - path: /stats/prometheus

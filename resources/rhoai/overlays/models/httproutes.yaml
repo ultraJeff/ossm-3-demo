@@ -1,0 +1,49 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: iris-onnx-route
+  namespace: ossm-ai-models
+spec:
+  hostnames:
+    - iris-onnx.apps.tallgeese.ultra.lab
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mesh-gateway
+      namespace: istio-system
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: iris-onnx-predictor
+          port: 80
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: phi-4-mini-route
+  namespace: ossm-ai-models
+spec:
+  hostnames:
+    - phi4-mesh.apps.tallgeese.ultra.lab
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mesh-gateway
+      namespace: istio-system
+  rules:
+    - backendRefs:
+        - group: ""
+          kind: Service
+          name: phi-4-mini-predictor
+          port: 80
+          weight: 1
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

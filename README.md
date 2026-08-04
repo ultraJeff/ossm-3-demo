@@ -1,5 +1,5 @@
 # ossm-3-demo
-OpenShift Service Mesh 3 Demo/Quickstart with Gateway API for ingress, supporting both traditional sidecar and ambient modes.
+OpenShift Service Mesh 3 Demo/Quickstart with Gateway API for ingress, using ambient mode.
 
 ## For Red Hatters
 Use the following demo:
@@ -12,16 +12,16 @@ Minimal OCP config:
 
 # Quickstart: OSSM3 with Kiali, Tempo, Bookinfo
 - Based off of https://github.com/mkralik3/sail-operator/tree/quickstart/docs/ossm/quickstarts/ossm3-kiali-tempo-bookinfo
-  
-  
-This quickstart guide provides step-by-step instructions on how to set up OSSM3 with Kiali, Tempo, Open Telemetry, and Bookinfo app. It also includes an example of using the next generation of ingress with the Kuberntetes Gateway API to access an example RestAPI.  
-  
+
+
+This quickstart guide provides step-by-step instructions on how to set up OSSM3 with Kiali, Tempo, Open Telemetry, and Bookinfo app. It also includes an example of using the next generation of ingress with the Kuberntetes Gateway API to access an example RestAPI.
+
 By the end of this quickstart, you will have installed OSSM3, where tracing information is collected by Open Telemetry Collector and Tempo, and monitoring is managed by an in-cluster monitoring stack. The Bookinfo sample application will be included in the service mesh, with a traffic generator sending one request per second to simualte traffic. Additionally, the Kiali UI and OSSMC plugin will be set up to provide a graphical overview.
 
 > [!NOTE]
-> The RestAPI uses Kubernetes Gateway API for ingress (Service Mesh 3 Sidecar)
-> 
-> The Bookinfo app has three different modes that let you choose between Service Mesh 2.x, Service Mesh 3 Sidecar or Service Mesh 3 Ambient mode deployments
+> The RestAPI uses Kubernetes Gateway API for ingress
+>
+> The Bookinfo app uses Service Mesh 3 Ambient mode
 
 ## Prerequisites
 - The OpenShift Service Mesh 3, Kiali, Tempo, Red Hat build of OpenTelemetry operators have been installed (you can install them by `./install_operators.sh` script which uses `resources/operators/overlays/core/`)
@@ -30,16 +30,16 @@ By the end of this quickstart, you will have installed OSSM3, where tracing info
 - You are logged into OpenShift via the CLI
 
 ## What is located where
-The quickstart 
+The quickstart
   * installs MiniO and Tempo to `tracing-system` namespace
   * installs OpenTelemetryCollector to `opentelemetrycollector` namespace
   * installs OSSM3 (Istio CR) with Kiali and OSSMC to `istio-system` namespace
   * installs IstioCNI to `istio-cni` namespace
   * installs Istio ingress gateway to `istio-ingress` namespace
   * installs Gateway API ingress gateway to `istio-ingress` namespace
-  * installs bookinfo app with traffic generator in `bookinfo` namespace
-  * installs RestAPI app in `rest-api-with-mesh` namespace
-  * (For ambient mode) installs ztunnel to `ztunnel` namespace
+  * installs bookinfo app with traffic generator in `ossm-bookinfo` namespace
+  * installs RestAPI app in `ossm-restapi` namespace
+  * installs ztunnel to `ztunnel` namespace
   * (Optional) installs Service Interconnect site in `skupper-site` namespace
 
 ## Configuration Structure
@@ -47,7 +47,6 @@ The configurations are organized using Kustomize overlays for maximum flexibilit
 
 ### OSSM3 Control Plane
 - `resources/ossm3/base/` - Common resources (ingress gateway)
-- `resources/ossm3/overlays/traditional/` - Traditional sidecar mode
 - `resources/ossm3/overlays/ambient/` - Ambient mode with ztunnel
 
 ### Tracing (Tempo + OpenTelemetry)
@@ -61,27 +60,17 @@ The configurations are organized using Kustomize overlays for maximum flexibilit
 - `resources/service-interconnect/overlays/west/` - Consumer site (Listener for remote services)
 
 ### Console Banner
-- `resources/console-banner/overlays/traditional/` - Green banner for sidecar mode
 - `resources/console-banner/overlays/ambient/` - Gold banner for ambient mode
 
 ### Bookinfo Application
 - `resources/bookinfo/base/` - Common Bookinfo resources
-- `resources/bookinfo/overlays/traditional/` - With sidecar injection
 - `resources/bookinfo/overlays/ambient/` - With waypoint gateway
 
 <!-- ## Shortcut to the end
-To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ossm3_demo.sh` script which will perform all steps automatically. -->
+To skip all the following steps and set everything up automatically (e.g., for demo purposes), simply run the prepared `./install_ambient_demo.sh` script which will perform all steps automatically. -->
 
 ## Full Infrastructure Setup
 
-### Traditional Sidecar Mode
-To set up the complete OSSM3 infrastructure with traditional sidecar injection:
-```bash
-./install_operators.sh
-./install_ossm3_demo.sh
-```
-
-### Ambient Mode
 To set up the complete OSSM3 infrastructure with ambient mode (no sidecars):
 ```bash
 ./install_operators.sh
@@ -90,25 +79,21 @@ To set up the complete OSSM3 infrastructure with ambient mode (no sidecars):
 
 ### Manual OSSM3 Deployment (without full demo)
 ```bash
-# Traditional mode
-oc apply -k resources/ossm3/overlays/traditional
-
-# Ambient mode
 oc apply -k resources/ossm3/overlays/ambient
 ```
 
 ## Steps
 All required YAML resources are in the `./resources` folder.
 For a more detailed description about what is set and why, see OpenShift Service Mesh documentation.
-  
+
 Enable Gateway API  (only if you did not run the `./install_operators.sh` script)
-------------  
+------------
 ```bash
 oc get crd gateways.gateway.networking.k8s.io &> /dev/null ||  { oc kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | oc apply -f -; }
 ```
 
-Set up Tempo and OpenTelemetryCollector  
-------------  
+Set up Tempo and OpenTelemetryCollector
+------------
 ```bash
 oc new-project tracing-system
 ```
@@ -159,16 +144,7 @@ oc new-project istio-cni
 oc new-project istio-ingress
 ```
 
-### Traditional Sidecar Mode (Default)
-For traditional sidecar injection mode, use the Kustomize overlay:
-```bash
-oc apply -k ./resources/ossm3/overlays/traditional
-oc wait --for condition=Ready istio/default --timeout 60s  -n istio-system
-oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
-```
-
-### Ambient Mode (Alternative)
-For ambient mode without sidecars, use the ambient overlay:
+Deploy ambient mode:
 ```bash
 oc apply -k ./resources/ossm3/overlays/ambient
 oc wait --for condition=Ready istio/default --timeout 60s  -n istio-system
@@ -184,9 +160,8 @@ oc apply -f ./resources/tempootel/base/istioTelemetry.yaml -n istio-system
 ```
 The opentelemetrycollector namespace needs to be added as a member of the mesh
 ```bash
-oc label namespace opentelemetrycollector istio-injection=enabled
+oc label namespace opentelemetrycollector istio.io/dataplane-mode=ambient
 ```
-> **_NOTE:_** `istio-injection=enabled` label works only when the name of Istio CR is `default`. If you use a different name as `default`, you need to use `istio.io/rev=<istioCR_NAME>` label instead of `istio-injection=enabled` in the all next steps of this example. Also, you will need to update values `config_map_name`, `istio_sidecar_injector_config_map_name`, `istiod_deployment_name`, `url_service_version` in the Kiali CR.
 
 Set up the ingress gateway via istio in a different namespace as istio-system.
 Add that namespace as a member of the mesh.
@@ -194,7 +169,8 @@ Add that namespace as a member of the mesh.
 oc label namespace istio-ingress istio-injection=enabled
 oc wait --for condition=Available deployment/istio-ingressgateway --timeout 60s -n istio-ingress
 ```
-> **_NOTE:_** The ingress gateway is automatically deployed as part of the OSSM3 Kustomize overlays.
+> **_NOTE:_** The ingress gateway uses `istio-injection=enabled` because it requires an Envoy sidecar to function as a gateway proxy. This is separate from the ambient data plane used by application namespaces.
+
 Expose Istio ingress route which will be used in the bookinfo traffic generator later (and via that URL, we will be accessing to the bookinfo app)
 ```bash
 oc expose svc istio-ingressgateway --port=http2 --name=istio-ingressgateway -n istio-ingress
@@ -228,7 +204,7 @@ Set up Kiali CR. The URL for Jaeger UI (which was exposed earlier) needs to be s
 ```bash
 export TRACING_INGRESS_ROUTE="http://$(oc get -n tracing-system route tracing-ui -o jsonpath='{.spec.host}')"
 cat ./resources/kiali/kialiCr.yaml | JAEGERROUTE="${TRACING_INGRESS_ROUTE}" envsubst | oc -n istio-system apply -f -
-oc wait --for condition=Successful kiali/kiali --timeout 150s -n istio-system 
+oc wait --for condition=Successful kiali/kiali --timeout 150s -n istio-system
 ```
 Increase timeout for the Kiali ui route in OCP since big queries for spans can take longer
 ```bash
@@ -244,54 +220,40 @@ oc wait -n istio-system --for=condition=Successful OSSMConsole ossmconsole --tim
 Set up BookInfo
 ------------
 
-## Quick Start: Choose Your Service Mesh Mode
-
-### Traditional Sidecar Mode (Production Ready)
-```bash
-./deploy-traditional.sh
-```
-
-### Ambient Mode (Next Generation)
 ```bash
 ./deploy-ambient.sh
 ```
-
-### To switch between Traditional and Ambient for the the Bookinfo app
+<!-- Create ossm-bookinfo namespace and add that namespace as a member of the mesh
 ```bash
-# Run this first and then run one of the deploys above
-./cleanup-bookinfo.sh
+oc new-project ossm-bookinfo
+oc label namespace ossm-bookinfo istio-injection=enabled
 ```
-<!-- Create bookinfo namespace and add that namespace as a member of the mesh
+Create pod monitor for ossm-bookinfo namespaces
 ```bash
-oc new-project bookinfo
-oc label namespace bookinfo istio-injection=enabled
-```
-Create pod monitor for bookinfo namespaces
-```bash
-oc apply -f ./resources/monitoring/podMonitor.yaml -n bookinfo
+oc apply -f ./resources/monitoring/podMonitor.yaml -n ossm-bookinfo
 ```
 > **_NOTE(shortcut):_**  It takes some time till pod monitor shows in Metrics targets, you can check it in OCP console Observe->Targets. The Kiali UI will not show the metrics till the targets are ready.
- 
+
 Install the Bookinfo app (the bookinfo resources are from `release-1.23` istio release branch)
 ```bash
-oc apply -f ./resources/Bookinfo/bookinfo.yaml -n bookinfo
-oc apply -f ./resources/Bookinfo/bookinfo-gateway.yaml -n bookinfo
-oc wait --for=condition=Ready pods --all -n bookinfo --timeout 60s
+oc apply -f ./resources/Bookinfo/bookinfo.yaml -n ossm-bookinfo
+oc apply -f ./resources/Bookinfo/bookinfo-gateway.yaml -n ossm-bookinfo
+oc wait --for=condition=Ready pods --all -n ossm-bookinfo --timeout 60s
 ```
 
 Optionally, install a traffic generator for booking app which every second generates a request to simulate traffic
 ```bash
 export INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
-cat ./resources/Bookinfo/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f - 
-oc apply -f ./resources/Bookinfo/traffic-generator.yaml -n bookinfo
+cat ./resources/Bookinfo/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n ossm-bookinfo apply -f -
+oc apply -f ./resources/Bookinfo/traffic-generator.yaml -n ossm-bookinfo
 ``` -->
-  
-Set up sample RestAPI    
-------------  
+
+Set up sample RestAPI
+------------
 
 Install the sample RestAPI `hello-service` via Kustomize
 ```bash
-oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod 
+oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod
 ```
 
 Optional: Enable JWT Authentication for RestAPI
@@ -348,14 +310,14 @@ oc patch network.operator.openshift.io cluster \
 
 Test that everything works correctly
 ------------
-Now, everything should be set.  
+Now, everything should be set.
 
 Check the Bookinfo app via the ingress route
 ```bash
 INGRESSHOST=$(oc get route istio-ingressgateway -n istio-ingress -o=jsonpath='{.spec.host}')
 echo "http://${INGRESSHOST}/productpage"
 ```
-  
+
 Check the RestAPI
 ```bash
 export GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
@@ -376,8 +338,8 @@ oc get pods -n opentelemetrycollector
 oc get pods -n istio-system
 oc get pods -n istio-cni
 oc get pods -n istio-ingress
-oc get pods -n bookinfo
-oc get pods -n rest-api-with-mesh    
+oc get pods -n ossm-bookinfo
+oc get pods -n ossm-restapi
 ```
 Output (the number of istio-cni pods is equals to the number of OCP nodes):
 ```bash
@@ -410,16 +372,16 @@ istio-ingressgateway-7f8878b6b4-bq64q   1/1     Running   0          32m
 istio-ingressgateway-7f8878b6b4-d7m5p   1/1     Running   0          33m
 
 NAME                             READY   STATUS    RESTARTS   AGE
-details-v1-65cfcf56f9-72k5p      2/2     Running   0          3m4s
-kiali-traffic-generator-cblht    2/2     Running   0          77s
-productpage-v1-d5789fdfb-rlkhl   2/2     Running   0          3m
-ratings-v1-7c9bd4b87f-5qmmp      2/2     Running   0          3m3s
-reviews-v1-6584ddcf65-mhd75      2/2     Running   0          3m2s
-reviews-v2-6f85cb9b7c-q8mc2      2/2     Running   0          3m2s
-reviews-v3-6f5b775685-ctb65      2/2     Running   0          3m1s
+details-v1-65cfcf56f9-72k5p      1/1     Running   0          3m4s
+kiali-traffic-generator-cblht    1/1     Running   0          77s
+productpage-v1-d5789fdfb-rlkhl   1/1     Running   0          3m
+ratings-v1-7c9bd4b87f-5qmmp      1/1     Running   0          3m3s
+reviews-v1-6584ddcf65-mhd75      1/1     Running   0          3m2s
+reviews-v2-6f85cb9b7c-q8mc2      1/1     Running   0          3m2s
+reviews-v3-6f5b775685-ctb65      1/1     Running   0          3m1s
 
 NAME                            READY   STATUS    RESTARTS   AGE
-service-b-v1-6c8c645587-krn87   2/2     Running   0          31m
-service-b-v2-68f956ddc6-v62jf   2/2     Running   0          31m
-web-front-end-9446fc49d-t8zh7   2/2     Running   0          31m
+service-b-v1-6c8c645587-krn87   1/1     Running   0          31m
+service-b-v2-68f956ddc6-v62jf   1/1     Running   0          31m
+web-front-end-9446fc49d-t8zh7   1/1     Running   0          31m
 ```

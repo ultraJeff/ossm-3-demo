@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <title>OSSM3 Demo Console</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style="vertical-align:middle; margin-right:8px;">
+      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="header-title">Service Mesh 3</span>
+    <span class="header-tag">ambient</span>
+  </div>
+  <span class="subtitle">Live demo console</span>
+  <button class="btn header-btn" onclick="redetectModules()">Re-detect</button>
+</header>
+
+<div id="app">
+<div id="main">
+
+  <!-- Option A: Components (no OSI labels) -->
+  <div class="gantt-chart">
+    <div class="gantt-title">Option A: Mesh Lifecycle by Component</div>
+    <div class="gantt-grid">
+      <div class="gantt-header">
+        <div class="gantt-label-col"></div>
+        <div class="gantt-bar-col">
+          <span>Install</span>
+          <span>Configure</span>
+          <span>Enroll</span>
+          <span>Traffic flows</span>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">istiod</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar blue" style="left:0%; width:100%;">
+            <span class="gantt-bar-text">control plane &mdash; certificates, xDS config, SPIFFE identity</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">istio-cni</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar yellow" style="left:0%; width:40%;">
+            <span class="gantt-bar-text">iptables redirect on pod start</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">ztunnel</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar green" style="left:15%; width:85%;">
+            <span class="gantt-bar-text">per-node proxy &mdash; mTLS, HBONE tunnels, TCP metrics</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">waypoint</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar orange" style="left:40%; width:60%;">
+            <span class="gantt-bar-text">per-namespace Envoy &mdash; AuthzPolicy, retries, timeouts</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">application</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar dim" style="left:0%; width:100%;">
+            <span class="gantt-bar-text">runs unchanged throughout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Option B: OSI Layers -->
+  <div class="gantt-chart">
+    <div class="gantt-title">Option B: Mesh Lifecycle by Network Layer</div>
+    <div class="gantt-grid">
+      <div class="gantt-header">
+        <div class="gantt-label-col"></div>
+        <div class="gantt-bar-col">
+          <span>Install</span>
+          <span>Configure</span>
+          <span>Enroll</span>
+          <span>Traffic flows</span>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L2/L3</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar dim" style="left:0%; width:100%;">
+            <span class="gantt-bar-text">OVN-Kubernetes &mdash; pod networking (exists before the mesh)</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L3/L4 rules</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar yellow" style="left:0%; width:40%;">
+            <span class="gantt-bar-text">istio-cni &mdash; iptables redirect to ztunnel ports</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L4 + mTLS</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar green" style="left:15%; width:85%;">
+            <span class="gantt-bar-text">ztunnel &mdash; TCP proxy, HBONE tunnels, PeerAuthentication</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L5/L6</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar blue" style="left:10%; width:90%;">
+            <span class="gantt-bar-text">mTLS sessions &mdash; SPIFFE identity, certificate exchange</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L7</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar orange" style="left:40%; width:60%;">
+            <span class="gantt-bar-text">waypoint Envoy &mdash; HTTP routing, AuthzPolicy, retries</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">Application</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar dim" style="left:0%; width:100%;">
+            <span class="gantt-bar-text">runs unchanged throughout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="arch-diagram">
+    <div class="arch-title">Service Mesh 3 &mdash; Ambient Mode Architecture</div>
+    <div class="arch-grid">
+      <!-- Control Plane row -->
+      <div class="arch-row arch-control-plane">
+        <div class="arch-label">Control Plane</div>
+        <div class="arch-box blue">
+          <div class="arch-box-title">istiod</div>
+          <div class="arch-box-detail">Certs, config, xDS</div>
+        </div>
+        <div class="arch-box blue">
+          <div class="arch-box-title">Istio CNI</div>
+          <div class="arch-box-detail">iptables on pod start</div>
+        </div>
+        <div class="arch-box blue">
+          <div class="arch-box-title">Kiali</div>
+          <div class="arch-box-detail">Topology &amp; traces</div>
+        </div>
+      </div>
+
+      <!-- Dashed line separator -->
+      <div class="arch-separator">
+        <span>data plane</span>
+      </div>
+
+      <!-- Data Plane - North/South -->
+      <div class="arch-row arch-data-plane">
+        <div class="arch-label">North/South</div>
+        <div class="arch-flow">
+          <div class="arch-box green">
+            <div class="arch-box-title">Client</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green highlight">
+            <div class="arch-box-title">Gateway</div>
+            <div class="arch-box-detail">Envoy (class: istio)</div>
+            <div class="arch-policy">HTTPRoute<br>GatewayClass</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">L4 mTLS + HBONE</div>
+            <div class="arch-policy">PeerAuth<br>iptables redirect</div>
+          </div>
+          <div class="arch-arrow hbone">=== mTLS ===&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">Dest node</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green highlight">
+            <div class="arch-box-title">Waypoint</div>
+            <div class="arch-box-detail">Envoy L7 (optional)</div>
+            <div class="arch-policy">AuthzPolicy<br>VirtualService</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green">
+            <div class="arch-box-title">Pod</div>
+            <div class="arch-box-detail">plain HTTP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Plane - East/West -->
+      <div class="arch-row arch-data-plane">
+        <div class="arch-label">East/West</div>
+        <div class="arch-flow">
+          <div class="arch-box green">
+            <div class="arch-box-title">Pod A</div>
+            <div class="arch-box-detail">plain HTTP</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">Source node</div>
+            <div class="arch-policy">SPIFFE identity</div>
+          </div>
+          <div class="arch-arrow hbone">=== HBONE mTLS ===&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">Dest node</div>
+            <div class="arch-policy">PeerAuth check</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green">
+            <div class="arch-box-title">Pod B</div>
+            <div class="arch-box-detail">plain HTTP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 1: Mesh Overview -->
+  <div class="section open" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">1</span>
+      <span class="section-title">Mesh Overview</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        This demo runs on OpenShift Service Mesh 3 in ambient mode. A per-node ztunnel proxy
+        handles L4 mTLS, and optional waypoint proxies provide L7 policy. Enrollment is a namespace label.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; line-height:1.8; font-family:'SF Mono','Fira Code',monospace;">
+        <strong style="color:#58a6ff;">How traffic flows through the stack</strong><br><br>
+        <div style="display:flex; gap:16px; margin-bottom:12px;">
+          <div style="flex:1; border:1px solid #30363d; border-radius:6px; padding:10px;">
+            <div style="color:#8b949e; font-weight:600; margin-bottom:6px;">OVN-Kubernetes (cluster CNI)</div>
+            <span style="color:#c9d1d9;">OVS bridge</span> <span style="color:#8b949e;">per node, veth pairs into pods</span><br>
+            <span style="color:#c9d1d9;">Same-node:</span> <span style="color:#8b949e;">L2 switch through br-int</span><br>
+            <span style="color:#c9d1d9;">Cross-node:</span> <span style="color:#8b949e;">Geneve tunnel (L3 overlay)</span><br>
+            <span style="color:#8b949e; font-size:11px;">Provides connectivity. Pods can talk to each other.</span>
+          </div>
+          <div style="flex:1; border:1px solid #3fb950; border-radius:6px; padding:10px;">
+            <div style="color:#3fb950; font-weight:600; margin-bottom:6px;">ztunnel (ambient mesh layer)</div>
+            <span style="color:#c9d1d9;">DaemonSet</span> <span style="color:#8b949e;">per node, same pattern as OVN-K</span><br>
+            <span style="color:#c9d1d9;">Intercept:</span> <span style="color:#d29922;">iptables REDIRECT :15001</span><br>
+            <span style="color:#c9d1d9;">Cross-node:</span> <span style="color:#3fb950;">HBONE tunnel (mTLS overlay)</span><br>
+            <span style="color:#8b949e; font-size:11px;">Adds encryption and identity on top of OVN-K.</span>
+          </div>
+        </div>
+        <div style="color:#d29922; font-size:11px;">
+          <code>routingViaHost: true</code> is the seam &mdash; it forces OVN-K to route through the host kernel where ztunnel's iptables rules can intercept.
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">Workload identity</div>
+        <button class="btn" onclick="runAction('/api/mesh/spiffe', 'out-1b')">Show SPIFFE Identities</button>
+      </div>
+      <pre class="output" id="out-1b"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Mesh infrastructure</div>
+        <button class="btn" onclick="runAction('/api/istio-crs', 'out-1c')">Show Istio CRs</button>
+        <button class="btn" onclick="runAction('/api/ztunnel-pods', 'out-1c')">Show ZTunnel Pods</button>
+        <button class="btn" onclick="runAction('/api/namespace-labels', 'out-1c')">Show Namespace Labels</button>
+        <button class="btn" onclick="runAction('/api/mesh-resources', 'out-1c')">Show All Mesh Resources</button>
+      </div>
+      <pre class="output" id="out-1c"></pre>
+    </div>
+  </div>
+
+  <!-- Section 2: Mesh Enrollment (live demo) -->
+  <div class="section" data-module="enrollment">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">2</span>
+      <span class="section-title">Mesh Enrollment by Label</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        A pinger pod is trying to reach a logger service every 2 seconds. The logger is in the mesh
+        (STRICT mTLS) so the pinger is blocked. Watch what happens when we enroll the pinger's namespace
+        into the mesh with a single label.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; line-height:1.6; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div id="enrollment-left-border" style="border:1px solid #f85149; border-radius:6px; padding:8px 12px; text-align:center;">
+            <div style="color:#c9d1d9; font-weight:600;">mesh-pinger</div>
+            <div style="color:#8b949e; font-size:10px;">ossm-enrollment-test</div>
+            <div id="enrollment-left-identity" style="color:#f85149; font-size:10px; margin-top:2px;">no SPIFFE identity</div>
+          </div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div id="enrollment-ztunnel-src" style="border:1px solid #30363d; border-radius:6px; padding:8px 12px; text-align:center; opacity:0.4;">
+            <div style="color:#d29922; font-weight:600;">ztunnel</div>
+            <div style="color:#8b949e; font-size:10px;">source node</div>
+          </div>
+          <span id="enrollment-arrow" style="color:#f85149; font-size:11px; padding:4px 6px;">&#x2718; no mTLS</span>
+          <div style="border:1px solid #d29922; border-radius:6px; padding:8px 12px; text-align:center;">
+            <div style="color:#d29922; font-weight:600;">ztunnel</div>
+            <div style="color:#8b949e; font-size:10px;">dest node</div>
+            <div style="color:#3fb950; font-size:10px; margin-top:2px;">PeerAuth: STRICT</div>
+          </div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #3fb950; border-radius:6px; padding:8px 12px; text-align:center;">
+            <div style="color:#c9d1d9; font-weight:600;">mesh-logger</div>
+            <div style="color:#8b949e; font-size:10px;">ossm-mesh-demo</div>
+          </div>
+        </div>
+        <div style="color:#d29922; margin-top:10px; font-size:11px;">
+          Add <code>istio.io/dataplane-mode=ambient</code> to ossm-enrollment-test &rarr; ztunnel intercepts pinger &rarr; HBONE mTLS &rarr; pings succeed
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">Current state</div>
+        <button class="btn" onclick="runAction('/api/enrollment/status', 'out-enroll-a')">Show Pinger &amp; Logger Logs</button>
+      </div>
+      <pre class="output" id="out-enroll-a"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Enroll the pinger's namespace into the mesh</div>
+        <button class="btn success" onclick="runAction('/api/enrollment/enroll', 'out-enroll-b', 'POST')">Enroll in Mesh</button>
+        <button class="btn danger" onclick="runAction('/api/enrollment/unenroll', 'out-enroll-b', 'POST')">Remove from Mesh</button>
+      </div>
+      <pre class="output" id="out-enroll-b"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Check results (click after a few seconds)</div>
+        <button class="btn" onclick="runAction('/api/enrollment/status', 'out-enroll-c')">Show Logs Again</button>
+      </div>
+      <pre class="output" id="out-enroll-c"></pre>
+    </div>
+  </div>
+
+  <!-- Section 3: Bookinfo -->
+  <div class="section" data-module="bookinfo">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">2</span>
+      <span class="section-title">Bookinfo Application</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        The classic Istio sample app &mdash; a product page backed by reviews, details, and ratings services.
+        Deployed with Gateway API for ingress routing.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">Client</div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #58a6ff; border-radius:4px; padding:4px 8px;"><span style="color:#58a6ff;">Gateway</span><br><span style="color:#8b949e; font-size:10px;">bookinfo-gateway</span></div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">productpage</span></div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">details</span></div>
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">reviews</span><span style="color:#8b949e; font-size:10px;"> v1/v2/v3</span></div>
+          </div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">ratings</span></div>
+        </div>
+      </div>
+      <div class="action-group">
+        <div class="action-group-label">Application</div>
+        <a class="link-btn" id="link-bookinfo" href="#" target="_blank">Open Bookinfo</a>
+        <button class="btn" onclick="runAction('/api/bookinfo/status', 'out-2a')">Show Status</button>
+        <button class="btn" onclick="runAction('/api/bookinfo/gateway', 'out-2a')">Show Gateway &amp; Routes</button>
+      </div>
+      <pre class="output" id="out-2a"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Generate traffic</div>
+        <button class="btn success" onclick="runAction('/api/bookinfo/traffic', 'out-2b', 'POST')">Generate Traffic (10 requests)</button>
+      </div>
+      <pre class="output" id="out-2b"></pre>
+    </div>
+  </div>
+
+  <!-- Section 3: REST API + Canary Deployments -->
+  <div class="section" data-module="restapi">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">3</span>
+      <span class="section-title">REST API + Canary Deployments</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        A Quarkus REST API using Kubernetes Gateway API for ingress. Demonstrates canary
+        deployments with traffic splitting between service versions.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">Client</div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #58a6ff; border-radius:4px; padding:4px 8px;"><span style="color:#58a6ff;">Gateway</span><br><span style="color:#8b949e; font-size:10px;">hello-gateway</span></div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">web-front-end</span></div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #d29922; border-radius:4px; padding:4px 8px;">
+            <span style="color:#d29922;">HTTPRoute</span><br>
+            <span style="color:#8b949e; font-size:10px;">weight split</span>
+          </div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">service-b v1</span></div>
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">service-b v2</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="action-group">
+        <div class="action-group-label">Application status</div>
+        <button class="btn" onclick="runAction('/api/restapi/status', 'out-3a')">Show Status</button>
+        <button class="btn" onclick="runAction('/api/restapi/canary', 'out-3a')">Show Canary Config (YAML)</button>
+      </div>
+      <pre class="output" id="out-3a"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Canary weight</div>
+        <div class="weight-control">
+          <label>v1: <input type="number" id="canary-v1" value="90" min="0" max="100" style="width:50px"> %</label>
+          <label>v2: <input type="number" id="canary-v2" value="10" min="0" max="100" style="width:50px"> %</label>
+          <button class="btn success" onclick="applyCanaryWeight()">Apply Weight</button>
+        </div>
+      </div>
+      <pre class="output" id="out-3b"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Test traffic distribution</div>
+        <button class="btn" onclick="runAction('/api/restapi/test-canary', 'out-3c', 'POST')">Send 20 Requests (count v1 vs v2)</button>
+      </div>
+      <pre class="output" id="out-3c"></pre>
+    </div>
+  </div>
+
+  <!-- Section 4: AI Model Inference -->
+  <div class="section" data-module="models">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">4</span>
+      <span class="section-title">AI Model Inference</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        AI/ML models protected by the service mesh &mdash; mTLS encryption, SPIFFE workload identity,
+        and L7 authorization for model serving. The model runtime serves plain HTTP; ztunnel handles
+        all encryption transparently.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="color:#58a6ff; font-weight:600; margin-bottom:8px;">Via mesh-gateway (HTTPRoute + OCP Route passthrough*)</div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">Client</div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">OCP Route</span><br><span style="color:#8b949e; font-size:10px;">TLS passthrough</span></div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #58a6ff; border-radius:4px; padding:4px 8px;"><span style="color:#58a6ff;">mesh-gateway</span><br><span style="color:#8b949e; font-size:10px;">HTTPRoute</span></div>
+          <span style="color:#d29922;">=ztunnel=&rarr;</span>
+          <div style="border:1px solid #d29922; border-radius:4px; padding:4px 8px;"><span style="color:#d29922;">Waypoint</span><br><span style="color:#8b949e; font-size:10px;">AuthzPolicy</span></div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">iris-onnx</span><br><span style="color:#8b949e; font-size:10px;">MLServer</span></div>
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">phi-4-mini</span><br><span style="color:#8b949e; font-size:10px;">vLLM</span></div>
+          </div>
+        </div>
+        <div style="color:#8b949e; font-weight:600; margin-bottom:8px;">Via data-science-gateway (RHOAI-managed)</div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">Client</div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">data-science-gw</span><br><span style="color:#8b949e; font-size:10px;">RHOAI auto-route</span></div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">iris-onnx</span><br><span style="color:#8b949e; font-size:9px;">no mesh, direct</span></div>
+            <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">phi-4-mini</span><br><span style="color:#8b949e; font-size:9px;">no mesh, direct</span></div>
+          </div>
+        </div>
+        <div style="color:#d29922; margin-top:8px; font-size:11px;">
+          RHOAI provides its own gateway but without mesh mTLS. Our mesh-gateway adds encryption, identity, and policy.<br>
+          <span style="color:#8b949e;">*OCP Routes are only needed because *.apps DNS points to the OCP router. With direct DNS to the gateway LB, Routes are unnecessary.</span>
+        </div>
+      </div>
+      <div class="action-group">
+        <div class="action-group-label">Model status</div>
+        <button class="btn" onclick="runAction('/api/models/status', 'out-4a')">Show Model Status</button>
+      </div>
+      <pre class="output" id="out-4a"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Run inference (shows request flow through mesh)</div>
+        <button class="btn success" onclick="runAction('/api/models/infer-iris', 'out-4b', 'POST')">Iris ONNX (classify)</button>
+        <button class="btn success" onclick="runAction('/api/models/infer-phi4', 'out-4b', 'POST')">Phi-4 Mini (chat)</button>
+      </div>
+      <pre class="output" id="out-4b"></pre>
+    </div>
+  </div>
+
+  <!-- Section 5: Zero Trust Security -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">5</span>
+      <span class="section-title">Zero Trust Security</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        Two layers of zero trust. Layer 1: PeerAuthentication (ztunnel, L4) controls whether
+        non-mesh traffic is allowed at all. Layer 2: AuthorizationPolicy (waypoint, L7) controls
+        which mesh identities can reach which services.
+      </div>
+
+      <div style="border-left:3px solid #d29922; padding-left:14px; margin-bottom:20px;">
+        <div style="color:#d29922; font-weight:600; font-size:14px; margin-bottom:8px;">Layer 1: PeerAuthentication</div>
+        <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
+          Enforced by ztunnel (L4). Controls whether pods accept connections without a valid mTLS certificate.
+          STRICT = mesh identity required. PERMISSIVE = plaintext allowed.
+        </div>
+
+        <div class="action-group">
+          <div class="action-group-label">Set PeerAuthentication mode</div>
+          <button class="btn" onclick="runAction('/api/peer-auth/show', 'out-5a')">Show Current</button>
+          <button class="btn success" onclick="runAction('/api/peer-auth/strict', 'out-5a', 'POST')">Set STRICT</button>
+          <button class="btn danger" onclick="runAction('/api/peer-auth/permissive', 'out-5a', 'POST')">Set PERMISSIVE</button>
+        </div>
+        <pre class="output" id="out-5a"></pre>
+
+        <div class="action-group">
+          <div class="action-group-label">Test: can a pod outside the mesh reach a mesh service?</div>
+          <button class="btn danger" onclick="runAction('/api/test-bypass', 'out-5a2', 'POST')">Test Outside Mesh</button>
+        </div>
+        <pre class="output" id="out-5a2"></pre>
+      </div>
+
+      <div style="border-left:3px solid #58a6ff; padding-left:14px;">
+        <div style="color:#58a6ff; font-weight:600; font-size:14px; margin-bottom:8px;">Layer 2: AuthorizationPolicy</div>
+        <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
+          Enforced by waypoint (L7). Controls which SPIFFE identities can reach which services.
+          When a policy is applied, only the listed identities are allowed &mdash; all others get 403.
+        </div>
+
+        <div class="action-group">
+          <div class="action-group-label">Restrict pod-to-pod access (only gateway identity allowed)</div>
+          <button class="btn success" onclick="runAction('/api/authz-policy/apply-pod', 'out-5b', 'POST')">Apply Policy</button>
+          <button class="btn" onclick="runAction('/api/authz-policy/show-pod', 'out-5b')">Show YAML</button>
+          <button class="btn danger" onclick="runAction('/api/authz-policy/delete-pod', 'out-5b', 'POST')">Delete Policy</button>
+        </div>
+        <pre class="output" id="out-5b"></pre>
+
+        <div class="action-group">
+          <div class="action-group-label">Test access</div>
+          <button class="btn" onclick="runAction('/api/test-allowed-identity', 'out-5b2', 'POST')">Test from Gateway (allowed)</button>
+          <button class="btn" onclick="runAction('/api/test-pod-to-pod', 'out-5b2', 'POST')">Test from test-client (denied)</button>
+        </div>
+        <pre class="output" id="out-5b2"></pre>
+
+        <div class="action-group">
+          <div class="action-group-label">Restrict cross-namespace access (only same namespace allowed)</div>
+          <button class="btn success" onclick="runAction('/api/authz-policy/apply-cross-ns', 'out-5c', 'POST')">Apply Policy</button>
+          <button class="btn" onclick="runAction('/api/authz-policy/show-cross-ns', 'out-5c')">Show YAML</button>
+          <button class="btn danger" onclick="runAction('/api/authz-policy/delete-cross-ns', 'out-5c', 'POST')">Delete Policy</button>
+        </div>
+        <pre class="output" id="out-5c"></pre>
+
+        <div class="action-group">
+          <div class="action-group-label">Test access</div>
+          <button class="btn" onclick="runAction('/api/test-same-namespace', 'out-5c2', 'POST')">Test from ossm-restapi (allowed)</button>
+          <button class="btn" onclick="runAction('/api/test-cross-namespace', 'out-5c2', 'POST')">Test from ossm-httpbin (denied)</button>
+        </div>
+        <pre class="output" id="out-5c2"></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 6: Traffic Management -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">6</span>
+      <span class="section-title">Traffic Management</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        Waypoint proxies enable L7 traffic management &mdash; timeouts and retries, declared as policy.
+        The application doesn't implement this logic; the mesh handles it.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <strong style="color:#58a6ff;">How the waypoint handles traffic policy</strong><br><br>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">test-client</span></div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="border:2px solid #d29922; border-radius:4px; padding:6px 10px;">
+            <span style="color:#d29922; font-weight:600;">Waypoint</span><br>
+            <span style="color:#8b949e; font-size:10px;">HTTPRoute: 5s timeout</span><br>
+            <span style="color:#8b949e; font-size:10px;">VirtualService: 3x retry</span>
+          </div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">httpbin</span></div>
+        </div>
+        <div style="display:flex; gap:16px; margin-top:8px;">
+          <div style="flex:1;">
+            <span style="color:#d29922; font-size:11px;">Timeout demo:</span><br>
+            <span style="color:#8b949e; font-size:11px;">httpbin /delay/10 takes 10s<br>Waypoint cuts it at 5s &rarr; HTTP 504</span>
+          </div>
+          <div style="flex:1;">
+            <span style="color:#d29922; font-size:11px;">Retry demo:</span><br>
+            <span style="color:#8b949e; font-size:11px;">httpbin /unstable fails ~50%<br>Waypoint retries 3x &rarr; client sees ~100%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">Traffic policy (5s timeout + 3 retries on 5xx)</div>
+        <button class="btn success" onclick="runAction('/api/traffic-policy/apply', 'out-6a', 'POST')">Apply Traffic Policy</button>
+        <button class="btn" onclick="runAction('/api/traffic-policy/status', 'out-6a')">Show Policy YAML</button>
+        <button class="btn danger" onclick="runAction('/api/traffic-policy/delete', 'out-6a', 'POST')">Delete Traffic Policy</button>
+      </div>
+      <pre class="output" id="out-6a"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Test: timeout (httpbin delays 10s, policy cuts at 5s)</div>
+        <button class="btn" onclick="runAction('/api/test-timeout', 'out-6b', 'POST')">Test Timeout</button>
+      </div>
+      <pre class="output" id="out-6b"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Test: retries (httpbin fails ~50%, policy retries 3x)</div>
+        <button class="btn" onclick="runAction('/api/test-unstable', 'out-6c', 'POST')">Test Flaky Endpoint (x10)</button>
+      </div>
+      <pre class="output" id="out-6c"></pre>
+    </div>
+  </div>
+
+  <!-- Section 7: Observability -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">7</span>
+      <span class="section-title">Observability</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        Kiali provides topology visualization, traffic metrics, and distributed tracing.
+        Tempo collects distributed traces via OpenTelemetry.
+      </div>
+      <div class="action-group">
+        <div class="action-group-label">Generate traffic for dashboards</div>
+        <button class="btn success" onclick="runAction('/api/generate-traffic', 'out-7a', 'POST')">Generate Traffic</button>
+      </div>
+      <pre class="output" id="out-7a"></pre>
+      <div class="action-group">
+        <div class="action-group-label">Open dashboards</div>
+        <a class="link-btn" id="link-kiali" href="#" target="_blank">Open Kiali Dashboard</a>
+        <a class="link-btn" id="link-console" href="#" target="_blank">OCP Console &rarr; Service Mesh</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="sidebar">
+  <h2>Mesh Audit Trail</h2>
+  <div class="audit-caption">Every mTLS connection logged with SPIFFE identity, destination, and bytes transferred</div>
+  <div class="audit-trail">
+    <div class="audit-controls">
+      <button class="btn" onclick="refreshAudit()" style="font-size:11px; padding:3px 8px;">Refresh</button>
+      <label style="font-size:11px; color:#8b949e;"><input type="checkbox" id="audit-auto" checked> Auto</label>
+    </div>
+    <pre class="audit-log" id="audit-log">Loading...</pre>
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <h2>Cluster Status</h2>
+
+  <div class="status-card">
+    <h3>Nodes</h3>
+    <div id="status-nodes"><span class="status-dot yellow"></span>Loading...</div>
+  </div>
+
+  <div class="status-card">
+    <h3>Mesh Control Plane</h3>
+    <div id="status-mesh"><span class="status-dot yellow"></span>Loading...</div>
+  </div>
+
+  <div class="status-card">
+    <h3>Infrastructure Pods</h3>
+    <div id="status-infra"><span class="status-dot yellow"></span>Loading...</div>
+  </div>
+
+  <div class="status-card">
+    <h3>PeerAuthentication</h3>
+    <div id="status-peer-auth"><span class="status-dot yellow"></span>Loading...</div>
+  </div>
+
+  <div class="status-card">
+    <h3>AuthorizationPolicy</h3>
+    <div id="status-authz"><span class="status-dot yellow"></span>Loading...</div>
+  </div>
+
+  <div class="status-card">
+    <h3>Traffic Policy</h3>
+    <div id="status-timeout"><span class="status-dot yellow"></span>Loading...</div>
+  </div>
+
+  <div id="ns-status-cards">
+    <!-- App namespace status -->
+  </div>
+</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -36,7 +36,7 @@ GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='
 if [ -z "$GATEWAY" ]; then
     echo -e "${YELLOW}Warning: Could not find gateway URL.${NC}"
     echo ""
-    
+
     # Check if the gateway exists at all
     oc get gateway hello-gateway -n istio-ingress &>/dev/null
     if [ $? -ne 0 ]; then
@@ -45,7 +45,7 @@ if [ -z "$GATEWAY" ]; then
         echo "Make sure you have:"
         echo "1. Installed the OSSM3 demo:"
         echo "   ./install_operators.sh"
-        echo "   ./install_ossm3_demo.sh"
+        echo "   ./install_ambient_demo.sh"
         echo ""
         echo "2. Deployed the RestAPI application:"
         echo "   oc apply -k ./resources/rest-api-demo/kustomize/overlays/pod"
@@ -70,15 +70,15 @@ test_endpoint() {
     local description=$1
     local curl_cmd=$2
     local expected_code=$3
-    
+
     echo -e "${YELLOW}Test: $description${NC}"
     echo "Command: $curl_cmd"
-    
+
     # Execute curl and capture response code
     response=$(eval "$curl_cmd -w '\n%{http_code}'" 2>/dev/null)
     http_code=$(echo "$response" | tail -n1)
     body=$(echo "$response" | sed '$d')
-    
+
     if [ "$http_code" = "$expected_code" ]; then
         echo -e "${GREEN}✓ Passed: Got expected HTTP $http_code${NC}"
         if [ ! -z "$body" ] && [ "$http_code" = "200" ]; then

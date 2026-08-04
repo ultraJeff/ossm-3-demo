@@ -13,7 +13,7 @@ This demo exposes the Quarkus REST API backend (`service-b`) from an "east" clus
 ```
 East Cluster                                    West Cluster
 ┌─────────────────────────┐                     ┌─────────────────────────┐
-│  rest-api-with-mesh     │                     │  skupper-site           │
+│  ossm-restapi     │                     │  skupper-site           │
 │  ┌───────────────────┐  │                     │  ┌───────────────────┐  │
 │  │ service-b (v1/v2) │  │   Skupper Link      │  │ east-rest-api-    │  │
 │  │ (Quarkus app)     │◄─┼───(mTLS tunnel)────►│  │ backend:8080     │  │

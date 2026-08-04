@@ -1,0 +1,51 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Mesh enrollment demo
+# Logger runs in ossm-mesh-demo (mesh-enrolled)
+# Pinger starts in ossm-enrollment-test (NOT in mesh) -- enrollment happens live
+
+resources:
+  - namespaces.yaml
+  - logger.yaml
+  - pinger.yaml
+  - peer-authentication.yaml
+
+# Logger deploys to the mesh-enrolled namespace
+patches:
+  - target:
+      kind: Deployment
+      name: mesh-logger
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: ossm-mesh-demo
+  - target:
+      kind: Service
+      name: mesh-logger
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: ossm-mesh-demo
+  - target:
+      kind: ConfigMap
+      name: mesh-logger-script
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: ossm-mesh-demo
+  # Pinger deploys to the NOT-enrolled namespace
+  - target:
+      kind: Deployment
+      name: mesh-pinger
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: ossm-enrollment-test
+  - target:
+      kind: ConfigMap
+      name: mesh-pinger-script
+    patch: |
+      - op: add
+        path: /metadata/namespace
+        value: ossm-enrollment-test

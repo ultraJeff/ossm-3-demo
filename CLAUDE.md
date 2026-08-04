@@ -5,7 +5,7 @@ This file provides guidance to Claude (Anthropic) and Cursor when working with c
 ## Project Overview
 
 This is an OpenShift Service Mesh 3 (OSSM3) demonstration repository that showcases a complete service mesh implementation using:
-- **OSSM3/Istio** for service mesh capabilities (traditional sidecar and ambient modes)
+- **OSSM3/Istio** for service mesh capabilities (ambient mode)
 - **Kiali** for observability and traffic visualization
 - **Tempo** for distributed tracing
 - **OpenTelemetry** for telemetry collection
@@ -24,23 +24,24 @@ The demo includes two sample applications:
 - `istio-system`: OSSM3 control plane, Kiali, and OSSMC plugin
 - `istio-cni`: Istio CNI components for pod networking
 - `istio-ingress`: Both Istio and Gateway API ingress gateways
-- `bookinfo`: Bookinfo sample application with traffic generator
-- `rest-api-with-mesh`: Quarkus REST API with canary deployment capabilities
-- `ztunnel`: Ztunnel proxy (ambient mode only)
+- `ossm-bookinfo`: Bookinfo sample application with traffic generator
+- `ossm-restapi`: Quarkus REST API with canary deployment capabilities
+- `ztunnel`: Ztunnel proxy for ambient mode L4 processing
 - `skupper-site`: Service Interconnect site (multi-cluster scenarios)
 
-### Service Mesh Modes
-This repo supports two mutually exclusive mesh modes for the data plane:
+### Service Mesh Mode
 
-| Aspect | Traditional Sidecar | Ambient |
-|--------|-------------------|---------|
-| Istio profile | `openshift` | `ambient` |
-| Pod containers | 2/2 (app + proxy) | 1/1 (no sidecar) |
-| Namespace label | `istio-injection: enabled` | `istio.io/dataplane-mode: ambient` |
-| L4 proxy | Sidecar per pod | Ztunnel per node |
-| L7 features | Always available | Requires waypoint proxy |
-| Extra CRs | None | ZTunnel CR + ztunnel namespace |
-| OVN prerequisite | None | `routingViaHost: true` |
+This repo uses ambient mode for the data plane:
+
+- **Istio profile**: `ambient`
+- **Pod containers**: 1/1 (no sidecar injected)
+- **Namespace label**: `istio.io/dataplane-mode: ambient`
+- **L4 proxy**: Ztunnel per node
+- **L7 features**: Requires waypoint proxy
+- **Extra CRs**: ZTunnel CR + ztunnel namespace
+- **OVN prerequisite**: `routingViaHost: true`
+
+Note: The `istio-ingress` namespace uses `istio-injection=enabled` for the ingress gateway pods, which is separate from the ambient data plane.
 
 ### Key Components
 - **Service Mesh**: Uses Istio CNI for pod networking instead of init containers
@@ -57,11 +58,6 @@ This repo supports two mutually exclusive mesh modes for the data plane:
 ./install_operators.sh
 ```
 
-**Deploy complete infrastructure -- traditional sidecar mode:**
-```bash
-./install_ossm3_demo.sh
-```
-
 **Deploy complete infrastructure -- ambient mode:**
 ```bash
 ./install_ambient_demo.sh
@@ -69,17 +65,12 @@ This repo supports two mutually exclusive mesh modes for the data plane:
 
 ### Bookinfo Demo Commands
 
-**Deploy traditional sidecar mode:**
-```bash
-./deploy-traditional.sh
-```
-
 **Deploy ambient mode:**
 ```bash
 ./deploy-ambient.sh
 ```
 
-**Clean up for mode switching:**
+**Clean up bookinfo:**
 ```bash
 ./cleanup-bookinfo.sh
 ```
@@ -131,8 +122,8 @@ oc get pods -n opentelemetrycollector
 oc get pods -n istio-system
 oc get pods -n istio-cni
 oc get pods -n istio-ingress
-oc get pods -n bookinfo
-oc get pods -n rest-api-with-mesh
+oc get pods -n ossm-bookinfo
+oc get pods -n ossm-restapi
 ```
 
 **Verify service mesh readiness:**
@@ -147,15 +138,13 @@ oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 ```
 .
 ├── install_operators.sh          # Installs OLM subscriptions + Gateway API CRDs
-├── install_ossm3_demo.sh         # Full traditional sidecar demo setup
 ├── install_ambient_demo.sh       # Full ambient mode demo setup
-├── deploy-traditional.sh         # Bookinfo in sidecar mode
 ├── deploy-ambient.sh             # Bookinfo in ambient mode
-├── cleanup-bookinfo.sh           # Tear down bookinfo namespace
+├── cleanup-bookinfo.sh           # Tear down ossm-bookinfo namespace
 ├── scripts/                      # test-api.sh, generate-traffic.sh, canary-rollout.sh
 ├── resources/
 │   ├── ossm3/                    # Istio/CNI/ingress gateway (base + overlays)
-│   ├── bookinfo/                 # Bookinfo app (base + traditional/ambient overlays)
+│   ├── bookinfo/                 # Bookinfo app (base + ambient overlay)
 │   ├── tempootel/                # Tempo + OTel (base + kiali/coo overlays)
 │   ├── gateway/                  # Gateway API resources
 │   ├── rest-api-demo/            # Quarkus REST API (kustomize base + overlays)
@@ -169,7 +158,6 @@ oc wait --for condition=Ready istiocni/default --timeout 60s -n istio-cni
 │   ├── coo/                      # Cluster Observability Operator configs
 │   └── noo/                      # Network Observability Operator configs
 ├── deploy/                       # Alternative kustomize tree (ArgoCD-oriented)
-├── ansible/                      # Ansible playbooks (alternative install path)
 └── docs/                         # Reference documentation
 ```
 
@@ -193,7 +181,7 @@ All resource directories follow the `base/` + `overlays/<variant>/` pattern:
 
 ## Important Configuration Details
 
-- The Istio CR must be named `default` for the `istio-injection=enabled` label to work; otherwise use `istio.io/rev=<name>`
+- The Istio CR must be named `default` for the `istio-injection=enabled` label to work on the ingress gateway namespace; otherwise use `istio.io/rev=<name>`
 - Gateway API CRDs must be installed before OSSM3 (handled by `install_operators.sh`)
 - Tempo requires persistent storage (uses MinIO by default)
 - Kiali requires ClusterRoleBindings for OpenShift monitoring integration

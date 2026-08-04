@@ -1,0 +1,13 @@
+{
+  "name": "ossm3-demo-console",
+  "version": "1.0.0",
+  "description": "OSSM3 Demo Console",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.22.2"
+  }
+}

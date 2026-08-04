@@ -34,22 +34,22 @@ echo -e "${BYellow}Deploying Bookinfo in ambient mode with waypoint...${NC}"
 oc apply -k resources/bookinfo/overlays/ambient
 
 echo -e "${BYellow}Waiting for pods to be ready...${NC}"
-oc wait --for=condition=Ready pods --all -n bookinfo --timeout 120s
+oc wait --for=condition=Ready pods --all -n ossm-bookinfo --timeout 120s
 
 echo -e "${BGreen}Ambient Mode Deployment Complete!${NC}"
 echo "=================================================================================================="
 echo -e "${BGreen}Verification:${NC}"
 echo "Pods should show 1/1 containers (no sidecars):"
-echo "oc get pods -n bookinfo"
+echo "oc get pods -n ossm-bookinfo"
 echo ""
 echo "Namespace should have istio.io/dataplane-mode=ambient:"
-echo "oc get namespace bookinfo -o yaml | grep labels -A5"
+echo "oc get namespace ossm-bookinfo -o yaml | grep labels -A5"
 echo ""
 echo "ZTunnel should be running:"
 echo "oc get daemonset ztunnel -n ztunnel"
 echo ""
 echo "Waypoint gateway should exist for L7 observability:"
-echo "oc get gateway bookinfo-waypoint -n bookinfo"
+echo "oc get gateway bookinfo-waypoint -n ossm-bookinfo"
 echo ""
 # Wait for Gateway to get an address
 for i in {1..15}; do
@@ -64,22 +64,22 @@ done
 echo "[optional] Installing Bookinfo traffic generator..."
 if [ "$INGRESSHOST" != "<pending>" ]; then
   # Update the ConfigMap with the new route
-  cat ./resources/bookinfo/base/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n bookinfo apply -f -
-  
+  cat ./resources/bookinfo/base/traffic-generator-configmap.yaml | ROUTE="http://${INGRESSHOST}/productpage" envsubst | oc -n ossm-bookinfo apply -f -
+
   # Check if the ReplicaSet already exists
-  if oc get rs kiali-traffic-generator -n bookinfo &>/dev/null; then
+  if oc get rs kiali-traffic-generator -n ossm-bookinfo &>/dev/null; then
     echo "Traffic generator already exists, restarting it with new configuration..."
     # Delete existing pods to force them to pick up the new ConfigMap
-    oc delete rs kiali-traffic-generator -n bookinfo --force --grace-period=0
+    oc delete rs kiali-traffic-generator -n ossm-bookinfo --force --grace-period=0
     # Recreate the ReplicaSet
-    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n bookinfo
+    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n ossm-bookinfo
   else
     # Create new ReplicaSet
-    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n bookinfo
+    oc apply -f ./resources/bookinfo/base/traffic-generator.yaml -n ossm-bookinfo
   fi
-  
+
   echo "Waiting for traffic generator to start..."
-  oc wait --for=condition=Ready pod -l app=kiali-traffic-generator -n bookinfo --timeout=60s 2>/dev/null || true
+  oc wait --for=condition=Ready pod -l app=kiali-traffic-generator -n ossm-bookinfo --timeout=60s 2>/dev/null || true
 else
   echo "Skipping traffic generator installation as Gateway address is not yet available."
 fi

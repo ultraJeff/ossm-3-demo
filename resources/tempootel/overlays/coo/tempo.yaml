@@ -14,7 +14,13 @@ spec:
   storageSize: 1Gi
   retention:
     global:
-      traces: 48h
+      traces: 4h
+  limits:
+    global:
+      ingestion:
+        ingestionBurstSizeBytes: 1000000
+        ingestionRateLimitBytes: 500000
+        maxTracesPerUser: 1000
   replicationFactor: 1
   template:
     gateway:
@@ -27,4 +33,3 @@ spec:
     distributor:
       tls:
         enabled: false
-

@@ -2,7 +2,7 @@ apiVersion: gateway.networking.k8s.io/v1beta1
 kind: HTTPRoute
 metadata:
   name: web-front-end-route
-  namespace: rest-api-with-mesh
+  namespace: ossm-restapi
 spec:
   parentRefs:
   - group: gateway.networking.k8s.io

@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mesh-pinger-script
+data:
+  ping.sh: |
+    #!/bin/sh
+    HOSTNAME=$(hostname)
+    echo "Mesh Pinger ($HOSTNAME) started -- pinging mesh-logger.ossm-mesh-demo.svc every 2s"
+    while true; do
+      RESULT=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 2 -H "X-Pinger-Pod: $HOSTNAME" http://mesh-logger.ossm-mesh-demo.svc/ping 2>/dev/null)
+      TS=$(date -u '+%H:%M:%S')
+      if [ "$RESULT" = "200" ]; then
+        echo "[$TS] PING OK"
+      else
+        echo "[$TS] PING FAILED (cannot reach logger -- mTLS required)"
+      fi
+      sleep 10
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesh-pinger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesh-pinger
+  template:
+    metadata:
+      labels:
+        app: mesh-pinger
+    spec:
+      containers:
+        - name: pinger
+          image: curlimages/curl
+          command: ["/bin/sh", "/scripts/ping.sh"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: mesh-pinger-script
+            defaultMode: 0755

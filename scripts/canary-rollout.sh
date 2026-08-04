@@ -31,7 +31,7 @@ do
     kind: VirtualService
     metadata:
       name: service-b
-      namespace: rest-api-with-mesh
+      namespace: ossm-restapi
     spec:
       hosts:
         - service-b

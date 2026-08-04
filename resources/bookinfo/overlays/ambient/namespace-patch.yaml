@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: bookinfo
+  name: ossm-bookinfo
   labels:
     istio.io/dataplane-mode: ambient
     # To see L7 traffic in Kiali

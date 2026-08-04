@@ -10,20 +10,10 @@ console-banner/
 │   ├── kustomization.yaml
 │   └── consolenotification.yaml
 ├── overlays/
-│   ├── traditional/        # Green banner for sidecar mode
 │   └── ambient/            # Gold banner for ambient mode
 ```
 
 ## Usage
-
-### Traditional Sidecar Mode (Green Banner)
-```bash
-oc apply -k ./resources/console-banner/overlays/traditional
-```
-
-Displays: **🔧 Service Mesh 3 — Traditional Sidecar Mode**
-- Background: Sea Green (#2E8B57)
-- Text: White (#FFFFFF)
 
 ### Ambient Mode (Gold Banner)
 ```bash
@@ -67,4 +57,3 @@ patches:
       path: /spec/color
       value: "#TEXT_COLOR"
 ```
-

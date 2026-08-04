@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Shared demo workloads — httpbin for traffic management, test-client for connectivity testing
+# Deploy into any mesh-enrolled namespace via an overlay that sets the target namespace
+
+resources:
+  - httpbin.yaml
+  - test-client.yaml

@@ -1,4 +1,4 @@
-# PodMonitor for scraping Istio sidecar proxies (Envoy)
+# PodMonitor for scraping Istio proxies (Envoy)
 # Collects metrics like istio_requests_total, istio_request_duration_milliseconds, etc.
 apiVersion: monitoring.rhobs/v1
 kind: PodMonitor
@@ -14,8 +14,8 @@ spec:
       operator: DoesNotExist
   namespaceSelector:
     matchNames:
-    - bookinfo
-    - rest-api-with-mesh
+    - ossm-bookinfo
+    - ossm-restapi
     - istio-ingress
   podMetricsEndpoints:
   - path: /stats/prometheus
@@ -52,4 +52,3 @@ spec:
     - sourceLabels: [__meta_kubernetes_pod_name]
       action: replace
       targetLabel: pod_name
-

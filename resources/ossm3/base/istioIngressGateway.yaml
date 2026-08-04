@@ -1,4 +1,3 @@
-# TODO: Don't actually need anymore. Should add Istio CR and CNI to this folder instead
 apiVersion: v1
 kind: Service
 metadata:
