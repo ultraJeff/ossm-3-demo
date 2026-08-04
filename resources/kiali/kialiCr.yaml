@@ -13,6 +13,12 @@ spec:
     namespace: istio-system
     pod_labels:
       sidecar.istio.io/inject: 'false'
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: 10m
+        memory: 128Mi
   external_services:
     grafana:
       enabled: false
