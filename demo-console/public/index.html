@@ -476,7 +476,7 @@
           <span style="color:#3fb950;">=mTLS=&rarr;</span>
           <div style="display:flex; flex-direction:column; gap:4px;">
             <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">iris-onnx</span><br><span style="color:#8b949e; font-size:10px;">MLServer</span></div>
-            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">phi-4-mini</span><br><span style="color:#8b949e; font-size:10px;">vLLM</span></div>
+            <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">opt-125m</span><br><span style="color:#8b949e; font-size:10px;">vLLM</span></div>
           </div>
         </div>
         <div style="color:#8b949e; font-weight:600; margin-bottom:8px;">Via data-science-gateway (RHOAI-managed)</div>
@@ -487,7 +487,7 @@
           <span style="color:#8b949e;">&rarr;</span>
           <div style="display:flex; flex-direction:column; gap:4px;">
             <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">iris-onnx</span><br><span style="color:#8b949e; font-size:9px;">no mesh, direct</span></div>
-            <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">phi-4-mini</span><br><span style="color:#8b949e; font-size:9px;">no mesh, direct</span></div>
+            <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">opt-125m</span><br><span style="color:#8b949e; font-size:9px;">no mesh, direct</span></div>
           </div>
         </div>
         <div style="color:#d29922; margin-top:8px; font-size:11px;">
@@ -503,7 +503,7 @@
       <div class="action-group">
         <div class="action-group-label">Run inference (shows request flow through mesh)</div>
         <button class="btn success" onclick="runAction('/api/models/infer-iris', 'out-4b', 'POST')">Iris ONNX (classify)</button>
-        <button class="btn success" onclick="runAction('/api/models/infer-phi4', 'out-4b', 'POST')">Phi-4 Mini (chat)</button>
+        <button class="btn success" onclick="runAction('/api/models/infer-phi4', 'out-4b', 'POST')">OPT-125M (chat)</button>
       </div>
       <pre class="output" id="out-4b"></pre>
     </div>

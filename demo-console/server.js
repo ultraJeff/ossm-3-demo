@@ -411,29 +411,25 @@ fi`);
 });
 
 app.post('/api/models/infer-phi4', async (req, res) => {
-  const result = await run(`echo 'Phi-4 Mini -- OpenAI-compatible chat completion via vLLM'
+  const result = await run(`echo 'OPT-125M -- OpenAI-compatible chat completion (llm namespace)'
 echo ''
-echo '$ curl -sk https://phi4-mesh.${DOMAIN}/v1/chat/completions \\\\'
-echo '    -H "Content-Type: application/json" \\\\'
-echo '    -d '"'"'{"model":"phi-4-mini","messages":[{"role":"user","content":"What is a service mesh in one sentence?"}],"max_tokens":100}'"'"''
+echo '$ curl -sk https://facebook-opt-125m-simulated-kserve-workload-svc.llm.svc:8000/v1/chat/completions'
 echo ''
-RESULT=$(curl -sk --connect-timeout 30 --max-time 60 https://phi4-mesh.${DOMAIN}/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"phi-4-mini","messages":[{"role":"user","content":"What is a service mesh in one sentence?"}],"max_tokens":100}' 2>/dev/null)
+RESULT=$(oc exec -n ${MODELS_NS} deploy/test-client -- curl -sk --connect-timeout 10 --max-time 30 https://facebook-opt-125m-simulated-kserve-workload-svc.llm.svc:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"What is a service mesh?"}],"max_tokens":50}' 2>/dev/null)
 if [ -n "$RESULT" ]; then
   CONTENT=$(echo "$RESULT" | jq -r '.choices[0].message.content' 2>/dev/null)
-  if [ -n "$CONTENT" ]; then
+  if [ -n "$CONTENT" ] && [ "$CONTENT" != "null" ]; then
     echo "Response:"
     echo "  $CONTENT"
   else
     echo "$RESULT" | jq . 2>/dev/null || echo "$RESULT"
   fi
   echo ''
-  echo 'This LLM request traversed the same mTLS mesh path as the ONNX model.'
-  echo 'The vLLM runtime serves a standard OpenAI API -- ztunnel encrypts it.'
+  echo 'This request went cross-namespace: ossm-ai-models -> llm'
+  echo 'Both namespaces are mesh-enrolled. ztunnel encrypted the connection.'
 else
-  echo 'No response from Phi-4 Mini. The model may still be loading (CPU-only'
-  echo 'inference can take time to initialize) or the route may not exist.'
-  echo ''
-  echo 'Check: oc get route mesh-gateway-phi4 -n istio-system'
+  echo 'No response. Check that the model is running:'
+  echo '  oc get pods -n llm'
 fi`);
   res.json(result);
 });

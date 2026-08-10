@@ -9,6 +9,7 @@ metadata:
     networking.kserve.io/visibility: exposed
 spec:
   predictor:
+    minReplicas: 0
     nodeSelector:
       kubernetes.io/hostname: tallgeese
     model:
