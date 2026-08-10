@@ -6,6 +6,9 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>OSSM3 Demo Console</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
+  <script src="https://unpkg.com/cytoscape@3.30.4/dist/cytoscape.min.js"></script>
+  <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
 </head>
 <body>
 
@@ -140,6 +143,28 @@
             <span class="gantt-bar-text">runs unchanged throughout</span>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Topology -->
+  <div class="section open" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">0</span>
+      <span class="section-title">Live Topology</span>
+    </div>
+    <div class="section-body">
+      <div class="topo-controls">
+        <button class="btn" onclick="refreshTopology()">Refresh</button>
+        <label style="font-size:12px; color:#8b949e;"><input type="checkbox" id="topo-auto" checked> Auto-refresh</label>
+        <span id="topo-status" style="font-size:11px; color:#8b949e; margin-left:auto;"></span>
+      </div>
+      <div id="topology-graph"></div>
+      <div class="topo-legend">
+        <span><span class="legend-dot" style="background:#3fb950;"></span> Workload</span>
+        <span><span class="legend-dot" style="background:#58a6ff;"></span> Service</span>
+        <span><span class="legend-dot" style="background:#d29922;"></span> Waypoint</span>
+        <span><span class="legend-dot" style="background:#8b949e; border-radius:2px;"></span> Namespace</span>
       </div>
     </div>
   </div>

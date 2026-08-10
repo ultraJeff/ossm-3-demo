@@ -224,12 +224,221 @@ async function refreshStatus() {
   }
 }
 
+// --- Topology graph ---
+
+var topoInstance = null;
+
+function isWaypoint(node) {
+  var labels = node.data.labels || {};
+  return labels['gateway.networking.k8s.io/gateway-name'] ||
+    (node.data.workload && node.data.workload.indexOf('waypoint') !== -1) ||
+    node.data.isGateway;
+}
+
+function addNamespaceGroups(elements) {
+  var namespaces = {};
+  elements.nodes.forEach(function(n) {
+    if (n.data.namespace) namespaces[n.data.namespace] = true;
+  });
+  Object.keys(namespaces).forEach(function(ns) {
+    elements.nodes.push({ data: { id: 'ns-' + ns, label: ns }, classes: 'ns-group' });
+  });
+  elements.nodes.forEach(function(n) {
+    if (n.data.namespace) n.data.parent = 'ns-' + n.data.namespace;
+  });
+  return elements;
+}
+
+function getNodeLabel(d) {
+  if (d.workload) return d.workload.replace(/-[a-f0-9]{8,10}(-[a-z0-9]{5})?$/, '');
+  if (d.service) return d.service;
+  if (d.app) return d.app;
+  return d.id.substring(0, 8);
+}
+
+async function refreshTopology() {
+  var statusEl = document.getElementById('topo-status');
+  if (statusEl) statusEl.textContent = 'loading...';
+  try {
+    var res = await fetch('/api/topology');
+    var data = await res.json();
+    if (data.error || !data.elements) {
+      if (statusEl) statusEl.textContent = data.error || 'no data';
+      return;
+    }
+
+    var elements = addNamespaceGroups(data.elements);
+    var container = document.getElementById('topology-graph');
+    if (!container) return;
+
+    // Determine node classes
+    elements.nodes.forEach(function(n) {
+      if (n.classes) return;
+      var classes = [];
+      if (n.data.nodeType === 'service') classes.push('svc');
+      else if (isWaypoint(n)) classes.push('waypoint');
+      else if (n.data.nodeType === 'workload') classes.push('workload');
+      if (n.data.isIdle) classes.push('idle');
+      n.classes = classes.join(' ');
+      if (!n.data.label) n.data.label = getNodeLabel(n.data);
+    });
+
+    // Determine edge classes
+    elements.edges.forEach(function(e) {
+      var classes = [];
+      if (e.data.traffic && e.data.traffic.rates && Object.keys(e.data.traffic.rates).length > 0) {
+        classes.push(e.data.healthStatus === 'Failure' ? 'error' : 'active');
+      } else {
+        classes.push('idle');
+      }
+      e.classes = classes.join(' ');
+    });
+
+    if (topoInstance) {
+      topoInstance.destroy();
+    }
+
+    if (typeof cytoscape === 'undefined') {
+      if (statusEl) statusEl.textContent = 'cytoscape not loaded';
+      return;
+    }
+
+    if (typeof cytoscapeDagre !== 'undefined') {
+      cytoscape.use(cytoscapeDagre);
+    }
+
+    topoInstance = cytoscape({
+      container: container,
+      elements: elements,
+      layout: {
+        name: 'dagre',
+        rankDir: 'LR',
+        nodeSep: 20,
+        rankSep: 60,
+        padding: 20
+      },
+      style: [
+        {
+          selector: 'node.ns-group',
+          style: {
+            'background-color': '#161b22',
+            'border-color': '#30363d',
+            'border-width': 1,
+            'label': 'data(label)',
+            'text-valign': 'top',
+            'text-halign': 'center',
+            'font-size': '11px',
+            'color': '#8b949e',
+            'padding': '16px',
+            'text-margin-y': -4,
+            'shape': 'roundrectangle'
+          }
+        },
+        {
+          selector: 'node.workload',
+          style: {
+            'background-color': '#3fb950',
+            'label': 'data(label)',
+            'font-size': '9px',
+            'color': '#e6edf3',
+            'text-valign': 'bottom',
+            'text-margin-y': 4,
+            'width': 20,
+            'height': 20,
+            'border-width': 0
+          }
+        },
+        {
+          selector: 'node.svc',
+          style: {
+            'background-color': '#58a6ff',
+            'shape': 'roundrectangle',
+            'label': 'data(label)',
+            'font-size': '9px',
+            'color': '#e6edf3',
+            'text-valign': 'bottom',
+            'text-margin-y': 4,
+            'width': 16,
+            'height': 16,
+            'border-width': 0
+          }
+        },
+        {
+          selector: 'node.waypoint',
+          style: {
+            'background-color': '#d29922',
+            'shape': 'diamond',
+            'label': 'data(label)',
+            'font-size': '9px',
+            'color': '#e6edf3',
+            'text-valign': 'bottom',
+            'text-margin-y': 4,
+            'width': 22,
+            'height': 22,
+            'border-width': 0
+          }
+        },
+        {
+          selector: 'node.idle',
+          style: { 'opacity': 0.5 }
+        },
+        {
+          selector: 'edge',
+          style: {
+            'width': 1,
+            'line-color': '#30363d',
+            'target-arrow-color': '#30363d',
+            'target-arrow-shape': 'triangle',
+            'curve-style': 'bezier',
+            'arrow-scale': 0.6
+          }
+        },
+        {
+          selector: 'edge.active',
+          style: {
+            'line-color': '#3fb950',
+            'target-arrow-color': '#3fb950',
+            'width': 2
+          }
+        },
+        {
+          selector: 'edge.error',
+          style: {
+            'line-color': '#f85149',
+            'target-arrow-color': '#f85149',
+            'width': 2
+          }
+        },
+        {
+          selector: 'edge.idle',
+          style: {
+            'line-style': 'dashed',
+            'opacity': 0.4
+          }
+        }
+      ],
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false
+    });
+
+    var nodeCount = elements.nodes.filter(function(n) { return !n.classes || n.classes.indexOf('ns-group') === -1; }).length;
+    var edgeCount = elements.edges.length;
+    var activeEdges = elements.edges.filter(function(e) { return e.classes && e.classes.indexOf('active') !== -1; }).length;
+    if (statusEl) statusEl.textContent = nodeCount + ' nodes, ' + edgeCount + ' edges (' + activeEdges + ' active)';
+
+  } catch (e) {
+    if (statusEl) statusEl.textContent = 'error: ' + e.message;
+  }
+}
+
 // --- Init ---
 
 window.addEventListener('DOMContentLoaded', function() {
   loadConfig();
   refreshStatus();
   refreshAudit();
+  refreshTopology();
 });
 
 setInterval(refreshStatus, 5000);
@@ -238,3 +447,8 @@ setInterval(function() {
     refreshAudit();
   }
 }, 5000);
+setInterval(function() {
+  if (document.getElementById('topo-auto') && document.getElementById('topo-auto').checked) {
+    refreshTopology();
+  }
+}, 10000);

@@ -104,6 +104,45 @@ app.get('/api/domain', (req, res) => {
   res.json({ domain: DOMAIN });
 });
 
+// --- Topology (Kiali graph API proxy) ---
+
+app.get('/api/topology', async (req, res) => {
+  const token = await run("oc whoami -t 2>/dev/null");
+  const t = token.output.trim().replace(/'/g, '');
+  if (!t) {
+    res.json({ error: 'Not logged in to OpenShift' });
+    return;
+  }
+
+  const nsMap = {
+    bookinfo: 'ossm-bookinfo',
+    restapi: 'ossm-restapi',
+    httpbin: 'ossm-httpbin',
+    models: MODELS_NS,
+    enrollment: 'ossm-mesh-demo,ossm-enrollment-test',
+  };
+  const namespaces = Object.keys(nsMap)
+    .filter(k => MODULES[k])
+    .map(k => nsMap[k])
+    .join(',');
+
+  if (!namespaces) {
+    res.json({ elements: { nodes: [], edges: [] } });
+    return;
+  }
+
+  const kialiHost = KIALI_URL.replace('https://', '');
+  const graphUrl = `https://${kialiHost}/api/namespaces/graph?namespaces=${namespaces}&graphType=workload&duration=300s&injectServiceNodes=true&includeIdleEdges=true`;
+  const result = await run(`curl -sk "${graphUrl}" -H "Authorization: Bearer ${t}" 2>/dev/null`);
+
+  try {
+    const data = JSON.parse(result.output);
+    res.json(data);
+  } catch (e) {
+    res.json({ error: 'Failed to fetch topology', elements: { nodes: [], edges: [] } });
+  }
+});
+
 // --- Core Mesh (always available) ---
 
 app.get('/api/mesh/spiffe', async (req, res) => {

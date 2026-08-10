@@ -72,6 +72,38 @@ header .subtitle {
   flex-shrink: 0;
 }
 
+/* Topology graph */
+#topology-graph {
+  height: 500px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+}
+
+.topo-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.topo-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
 /* Gantt chart */
 .gantt-chart {
   background: #161b22;
