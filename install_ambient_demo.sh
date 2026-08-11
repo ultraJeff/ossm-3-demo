@@ -95,7 +95,6 @@ oc apply -f ./resources/monitoring/podMonitor.yaml -n istio-system
 echo -e "${BGreen}[4/9] Setting up Gateway Infrastructure${NC}"
 
 oc apply -k ./resources/gateway
-oc label namespace istio-ingress istio-injection=enabled --overwrite
 oc wait --for condition=Available deployment/istio-ingressgateway --timeout 60s -n istio-ingress 2>/dev/null || true
 
 # ============================================

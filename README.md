@@ -166,10 +166,8 @@ oc label namespace opentelemetrycollector istio.io/dataplane-mode=ambient
 Set up the ingress gateway via istio in a different namespace as istio-system.
 Add that namespace as a member of the mesh.
 ```bash
-oc label namespace istio-ingress istio-injection=enabled
 oc wait --for condition=Available deployment/istio-ingressgateway --timeout 60s -n istio-ingress
 ```
-> **_NOTE:_** The ingress gateway uses `istio-injection=enabled` because it requires an Envoy sidecar to function as a gateway proxy. This is separate from the ambient data plane used by application namespaces.
 
 Expose Istio ingress route which will be used in the bookinfo traffic generator later (and via that URL, we will be accessing to the bookinfo app)
 ```bash
@@ -226,7 +224,6 @@ Set up BookInfo
 <!-- Create ossm-bookinfo namespace and add that namespace as a member of the mesh
 ```bash
 oc new-project ossm-bookinfo
-oc label namespace ossm-bookinfo istio-injection=enabled
 ```
 Create pod monitor for ossm-bookinfo namespaces
 ```bash

@@ -41,7 +41,6 @@ This repo uses ambient mode for the data plane:
 - **Extra CRs**: ZTunnel CR + ztunnel namespace
 - **OVN prerequisite**: `routingViaHost: true`
 
-Note: The `istio-ingress` namespace uses `istio-injection=enabled` for the ingress gateway pods, which is separate from the ambient data plane.
 
 ### Key Components
 - **Service Mesh**: Uses Istio CNI for pod networking instead of init containers
@@ -181,7 +180,6 @@ All resource directories follow the `base/` + `overlays/<variant>/` pattern:
 
 ## Important Configuration Details
 
-- The Istio CR must be named `default` for the `istio-injection=enabled` label to work on the ingress gateway namespace; otherwise use `istio.io/rev=<name>`
 - Gateway API CRDs must be installed before OSSM3 (handled by `install_operators.sh`)
 - Tempo requires persistent storage (uses MinIO by default)
 - Kiali requires ClusterRoleBindings for OpenShift monitoring integration
