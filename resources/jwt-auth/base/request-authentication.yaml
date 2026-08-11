@@ -6,7 +6,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: hello-gateway
+      app: restapi-gateway
   jwtRules:
   - issuer: "https://example.com"
     jwksUri: "https://example.com/.well-known/jwks.json"

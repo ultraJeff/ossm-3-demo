@@ -91,7 +91,7 @@ auth0 test token -a ${API_IDENTIFIER} -s read:api write:api
 ## Testing the Protected API
 
 ```bash
-export GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
+export GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
 
 # Test with valid token (should work)
 curl -H "Authorization: Bearer $TOKEN" $GATEWAY/hello | jq
@@ -111,10 +111,10 @@ Create a rule in Auth0 to add custom claims:
 ```javascript
 function addCustomClaims(user, context, callback) {
   const namespace = 'https://rest-api.example.com/';
-  
+
   context.accessToken[namespace + 'roles'] = user.app_metadata.roles || [];
   context.accessToken[namespace + 'department'] = user.user_metadata.department || 'default';
-  
+
   callback(null, user, context);
 }
 ```
@@ -129,7 +129,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: hello-gateway
+      app: restapi-gateway
   action: ALLOW
   rules:
   - from:

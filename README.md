@@ -320,7 +320,7 @@ echo "http://${INGRESSHOST}/productpage"
 
 Check the RestAPI
 ```bash
-export GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
+export GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
 
 curl -s $GATEWAY/hello | jq
 curl -s $GATEWAY/hello-service | jq
@@ -367,7 +367,7 @@ istio-cni-node-wml9b   1/1     Running   0          8m44s
 istio-cni-node-x8np2   1/1     Running   0          8m44s
 
 NAME                                    READY   STATUS    RESTARTS   AGE
-hello-gateway-istio-8449867f56-zsqk5    1/1     Running   0          33m
+restapi-gateway-istio-8449867f56-zsqk5    1/1     Running   0          33m
 istio-ingressgateway-7f8878b6b4-bq64q   1/1     Running   0          32m
 istio-ingressgateway-7f8878b6b4-d7m5p   1/1     Running   0          33m
 

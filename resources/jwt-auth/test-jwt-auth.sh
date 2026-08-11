@@ -31,16 +31,16 @@ if [ $? -ne 0 ]; then
 fi
 
 # Get the gateway URL
-GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}' 2>/dev/null)
+GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}' 2>/dev/null)
 
 if [ -z "$GATEWAY" ]; then
     echo -e "${YELLOW}Warning: Could not find gateway URL.${NC}"
     echo ""
 
     # Check if the gateway exists at all
-    oc get gateway hello-gateway -n istio-ingress &>/dev/null
+    oc get gateway restapi-gateway -n istio-ingress &>/dev/null
     if [ $? -ne 0 ]; then
-        echo -e "${RED}Error: Gateway 'hello-gateway' does not exist in namespace 'istio-ingress'.${NC}"
+        echo -e "${RED}Error: Gateway 'restapi-gateway' does not exist in namespace 'istio-ingress'.${NC}"
         echo ""
         echo "Make sure you have:"
         echo "1. Installed the OSSM3 demo:"
@@ -57,7 +57,7 @@ if [ -z "$GATEWAY" ]; then
         echo "The gateway may still be provisioning. Wait a moment and try again."
         echo ""
         echo "Check gateway status:"
-        echo "  oc describe gateway hello-gateway -n istio-ingress"
+        echo "  oc describe gateway restapi-gateway -n istio-ingress"
     fi
     exit 1
 fi

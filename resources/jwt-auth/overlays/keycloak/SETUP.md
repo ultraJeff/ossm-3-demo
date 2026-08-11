@@ -79,7 +79,7 @@ echo $TOKEN
 
 ### 3. Test the Protected API
 ```bash
-export GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
+export GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
 
 # This should work
 curl -H "Authorization: Bearer $TOKEN" $GATEWAY/hello | jq

@@ -180,7 +180,7 @@ echo ""
 echo -e "${BGreen}URLs:${NC}"
 
 BOOKINFO_GW=$(oc get gateway bookinfo-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
-RESTAPI_GW=$(oc get gateway hello-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+RESTAPI_GW=$(oc get gateway restapi-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
 
 [ -n "$BOOKINFO_GW" ] && echo "  Bookinfo:  http://${BOOKINFO_GW}/productpage"
 [ -n "$RESTAPI_GW" ] && echo "  REST API:  http://${RESTAPI_GW}/hello"

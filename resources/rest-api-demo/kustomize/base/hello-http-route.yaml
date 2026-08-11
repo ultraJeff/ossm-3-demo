@@ -7,7 +7,7 @@ spec:
   parentRefs:
   - group: gateway.networking.k8s.io
     kind: Gateway
-    name: hello-gateway
+    name: restapi-gateway
     namespace: istio-ingress
   rules:
   - matches:

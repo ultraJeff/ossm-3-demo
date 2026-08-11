@@ -114,17 +114,13 @@ app.get('/api/topology', async (req, res) => {
     return;
   }
 
-  const nsMap = {
-    bookinfo: 'ossm-bookinfo',
-    restapi: 'ossm-restapi',
-    httpbin: 'ossm-httpbin',
-    models: MODELS_NS,
-    enrollment: 'ossm-mesh-demo,ossm-enrollment-test',
-  };
-  const namespaces = Object.keys(nsMap)
-    .filter(k => MODULES[k])
-    .map(k => nsMap[k])
-    .join(',');
+  // Start with infra namespaces, then add all mesh-enrolled ossm-* namespaces
+  const nsList = ['istio-ingress'];
+  const enrolledNs = await run("oc get namespaces -l istio.io/dataplane-mode=ambient -o jsonpath='{.items[*].metadata.name}' 2>/dev/null");
+  enrolledNs.output.replace(/'/g, '').trim().split(/\s+/).forEach(function(ns) {
+    if (ns && nsList.indexOf(ns) === -1) nsList.push(ns);
+  });
+  const namespaces = nsList.join(',');
 
   if (!namespaces) {
     res.json({ elements: { nodes: [], edges: [] } });
@@ -317,18 +313,18 @@ app.get('/api/bookinfo/gateway', async (req, res) => {
 
 app.get('/api/restapi/status', async (req, res) => {
   const pods = await run('oc get pods -n ossm-restapi 2>/dev/null');
-  const gw = await run('oc get gateway hello-gateway -n istio-ingress 2>/dev/null');
+  const gw = await run('oc get gateway restapi-gateway -n istio-ingress 2>/dev/null');
   const routes = await run('oc get httproute -n ossm-restapi 2>/dev/null');
   res.json({ output: '=== Pods ===\n' + pods.output + '\n=== Gateway ===\n' + gw.output + '\n=== HTTPRoutes ===\n' + routes.output, exitCode: 0 });
 });
 
 app.post('/api/restapi/test', async (req, res) => {
-  const result = await run(`GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+  const result = await run(`GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
 if [ -z "$GATEWAY" ]; then
-  echo 'hello-gateway has no address yet. It may still be provisioning.'
+  echo 'restapi-gateway has no address yet. It may still be provisioning.'
   echo ''
   echo 'Gateway status:'
-  oc get gateway hello-gateway -n istio-ingress 2>/dev/null
+  oc get gateway restapi-gateway -n istio-ingress 2>/dev/null
   exit 1
 fi
 echo "Gateway address: $GATEWAY"
@@ -384,9 +380,9 @@ oc get httproute service-b-canary -n ossm-restapi -o jsonpath='{range .spec.rule
 });
 
 app.post('/api/restapi/test-canary', async (req, res) => {
-  const result = await run(`GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+  const result = await run(`GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
 if [ -z "$GATEWAY" ]; then
-  echo 'hello-gateway has no address yet.'
+  echo 'restapi-gateway has no address yet.'
   exit 1
 fi
 echo "Sending 20 requests to $GATEWAY/hello-service ..."
@@ -1055,7 +1051,7 @@ echo ''
   if (MODULES.restapi) {
     commands += `
 echo 'REST API (via Gateway API):'
-GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
 if [ -n "$GATEWAY" ]; then
   PASS=0; FAIL=0
   for i in $(seq 1 5); do

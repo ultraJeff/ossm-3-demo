@@ -12,7 +12,7 @@ BYellow='\033[1;33m'      # Yellow
 #BCyan='\033[1;36m'        # Cyan
 #BWhite='\033[1;37m'       # White
 
-export GATEWAY=$(oc get gateway hello-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
+export GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o template --template='{{(index .status.addresses 0).value}}')
 
 SLEEP=20
 V1_WEIGHT=100

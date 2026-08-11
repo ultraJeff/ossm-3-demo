@@ -156,15 +156,16 @@
     <div class="section-body">
       <div class="topo-controls">
         <button class="btn" onclick="refreshTopology()">Refresh</button>
-        <label style="font-size:12px; color:#8b949e;"><input type="checkbox" id="topo-auto" checked> Auto-refresh</label>
+        <label style="font-size:12px; color:#8b949e;"><input type="checkbox" id="topo-auto"> Auto-refresh</label>
         <span id="topo-status" style="font-size:11px; color:#8b949e; margin-left:auto;"></span>
       </div>
       <div id="topology-graph"></div>
       <div class="topo-legend">
         <span><span class="legend-dot" style="background:#3fb950;"></span> Workload</span>
         <span><span class="legend-dot" style="background:#58a6ff;"></span> Service</span>
-        <span><span class="legend-dot" style="background:#d29922;"></span> Waypoint</span>
-        <span><span class="legend-dot" style="background:#8b949e; border-radius:2px;"></span> Namespace</span>
+        <span><span class="legend-dot" style="background:#bc8cff; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> Gateway</span>
+        <span><span class="legend-dot" style="background:#d29922; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> Waypoint</span>
+        <span><span class="legend-dot" style="background:#f85149; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> External Gateway</span>
       </div>
     </div>
   </div>

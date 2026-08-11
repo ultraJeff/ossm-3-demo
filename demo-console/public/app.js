@@ -227,6 +227,7 @@ async function refreshStatus() {
 // --- Topology graph ---
 
 var topoInstance = null;
+var MODELS_NS_FRONTEND = 'ossm-ai-models';
 
 function isWaypoint(node) {
   var labels = node.data.labels || {};
@@ -246,6 +247,124 @@ function addNamespaceGroups(elements) {
   elements.nodes.forEach(function(n) {
     if (n.data.namespace) n.data.parent = 'ns-' + n.data.namespace;
   });
+
+  // Build lookup maps
+  var nodeById = {};
+  elements.nodes.forEach(function(n) { nodeById[n.data.id] = n.data; });
+  var existingEdges = {};
+  elements.edges.forEach(function(e) { existingEdges[e.data.source + '->' + e.data.target] = true; });
+
+  var edgeCounter = 0;
+  function addStructEdge(srcId, tgtId) {
+    var key = srcId + '->' + tgtId;
+    if (existingEdges[key]) return;
+    elements.edges.push({ data: { id: 'struct-' + (edgeCounter++), source: srcId, target: tgtId }, classes: 'structural' });
+    existingEdges[key] = true;
+  }
+
+  // Add structural edges: service → workload (strict: same namespace, same app label)
+  var services = elements.nodes.filter(function(n) { return n.data.nodeType === 'service'; });
+  var workloads = elements.nodes.filter(function(n) { return n.data.nodeType === 'workload'; });
+
+  services.forEach(function(svc) {
+    var svcName = svc.data.service || '';
+    if (svcName.indexOf('waypoint') !== -1) return;
+    if (svcName.indexOf('-metrics') !== -1) return;
+    workloads.forEach(function(wl) {
+      if (svc.data.namespace !== wl.data.namespace) return;
+      if (isWaypoint(wl)) return;
+      var wlApp = wl.data.app || '';
+      var wlName = wl.data.workload || '';
+      // Skip when service and workload have the same name (looks like a self-loop)
+      if (svcName === wlName) return;
+      if (wlApp && wlApp === svcName) {
+        addStructEdge(svc.data.id, wl.data.id);
+      }
+    });
+  });
+
+  // Add structural edges: waypoint → app workloads/services in same namespace
+  var waypointNodes = elements.nodes.filter(function(n) { return isWaypoint(n) && n.data.nodeType === 'workload'; });
+  waypointNodes.forEach(function(wp) {
+    // Connect to services that still exist
+    services.forEach(function(svc) {
+      if (svc.data.namespace !== wp.data.namespace) return;
+      var svcName = svc.data.service || '';
+      if (svcName.indexOf('waypoint') !== -1) return;
+      if (svcName.indexOf('-metrics') !== -1) return;
+      addStructEdge(wp.data.id, svc.data.id);
+    });
+    // Connect to workloads that have no corresponding service node
+    workloads.forEach(function(wl) {
+      if (wl.data.namespace !== wp.data.namespace) return;
+      if (isWaypoint(wl)) return;
+      var wlName = wl.data.workload || '';
+      if (wlName.indexOf('traffic-generator') !== -1) return;
+      if (wlName === 'test-client') return;
+      // Check if there's already a service node for this workload
+      var hasService = services.some(function(s) { return s.data.namespace === wl.data.namespace && s.data.service === wl.data.app; });
+      if (!hasService) {
+        addStructEdge(wp.data.id, wl.data.id);
+      }
+    });
+  });
+
+  // Add structural edges: ingress gateway workloads → waypoints in target namespaces
+  var gatewayTargets = {
+    'bookinfo-gateway-istio': 'ossm-bookinfo',
+    'restapi-gateway-istio': 'ossm-restapi',
+    'mesh-gateway-istio': 'ossm-ai-models',
+  };
+  workloads.forEach(function(gw) {
+    var wlName = gw.data.workload || '';
+    var targetNs = gatewayTargets[wlName];
+    if (!targetNs) return;
+    var waypoint = elements.nodes.find(function(n) {
+      return n.data.namespace === targetNs && isWaypoint(n) && n.data.nodeType === 'workload';
+    });
+    if (waypoint) {
+      addStructEdge(gw.data.id, waypoint.data.id);
+    }
+  });
+
+  // Add synthetic nodes for non-mesh gateways (RHOAI, MaaS)
+  elements.nodes.push({
+    data: { id: 'syn-rhoai-gw', label: 'data-science-gateway', namespace: 'openshift-ingress', nodeType: 'workload' },
+    classes: 'external-gateway'
+  });
+  elements.nodes.push({
+    data: { id: 'syn-rhoai-ns', label: 'openshift-ingress', nodeType: 'group' },
+    classes: 'ns-group'
+  });
+  elements.nodes.forEach(function(n) {
+    if (n.data.id === 'syn-rhoai-gw') n.data.parent = 'syn-rhoai-ns';
+  });
+
+  // Connect RHOAI gateway to AI model workloads
+  workloads.forEach(function(wl) {
+    var wlName = wl.data.workload || '';
+    if (wl.data.namespace === MODELS_NS_FRONTEND && (wlName.indexOf('predictor') !== -1)) {
+      addStructEdge('syn-rhoai-gw', wl.data.id);
+    }
+  });
+
+  // Add MaaS gateway if llm namespace is enrolled
+  var llmNodes = elements.nodes.filter(function(n) { return n.data.namespace === 'llm'; });
+  if (llmNodes.length > 0) {
+    elements.nodes.push({
+      data: { id: 'syn-maas-gw', label: 'maas-default-gateway', namespace: 'openshift-ingress', nodeType: 'workload' },
+      classes: 'external-gateway'
+    });
+    elements.nodes.forEach(function(n) {
+      if (n.data.id === 'syn-maas-gw') n.data.parent = 'syn-rhoai-ns';
+    });
+    llmNodes.forEach(function(n) {
+      if (n.data.nodeType === 'workload' && !isWaypoint(n)) {
+        addStructEdge('syn-maas-gw', n.data.id);
+      }
+    });
+  }
+
   return elements;
 }
 
@@ -267,6 +386,43 @@ async function refreshTopology() {
       return;
     }
 
+    // Filter out monitoring noise
+    data.elements.nodes = data.elements.nodes.filter(function(n) {
+      var ns = n.data.namespace || '';
+      var svc = n.data.service || '';
+      var wl = n.data.workload || '';
+      // Remove prometheus/monitoring namespaces
+      if (ns === 'openshift-user-workload-monitoring') return false;
+      if (ns === 'istio-system') return false;
+      // Filter legacy ingress gateway
+      if (wl === 'istio-ingressgateway') return false;
+      // Filter Kiali-returned MaaS gateway (we add a synthetic one)
+      if (wl && wl.indexOf('maas-default-gateway') !== -1) return false;
+      // Remove metrics services
+      if (svc.indexOf('-metrics') !== -1) return false;
+      // Remove service nodes from istio-ingress (duplicates of workload nodes)
+      if (ns === 'istio-ingress' && n.data.nodeType === 'service') return false;
+      // Remove service nodes from istio-system (keep workloads only)
+      if (ns === 'istio-system' && n.data.nodeType === 'service') return false;
+      // Remove waypoint service nodes (the diamond workload node represents them)
+      if (n.data.nodeType === 'service' && svc.indexOf('waypoint') !== -1) return false;
+      // Remove service nodes that duplicate a workload (same name or service is workload+suffix)
+      if (n.data.nodeType === 'service') {
+        var hasSameNameWorkload = data.elements.nodes.some(function(other) {
+          if (other.data.nodeType !== 'workload' || other.data.namespace !== ns) return false;
+          var owlName = other.data.workload || '';
+          return owlName === svc || svc.indexOf(owlName) === 0;
+        });
+        if (hasSameNameWorkload) return false;
+      }
+      return true;
+    });
+    var keepIds = {};
+    data.elements.nodes.forEach(function(n) { keepIds[n.data.id] = true; });
+    data.elements.edges = data.elements.edges.filter(function(e) {
+      return keepIds[e.data.source] && keepIds[e.data.target];
+    });
+
     var elements = addNamespaceGroups(data.elements);
     var container = document.getElementById('topology-graph');
     if (!container) return;
@@ -276,6 +432,7 @@ async function refreshTopology() {
       if (n.classes) return;
       var classes = [];
       if (n.data.nodeType === 'service') classes.push('svc');
+      else if (n.data.workload && n.data.workload.indexOf('-gateway-') !== -1) classes.push('gateway');
       else if (isWaypoint(n)) classes.push('waypoint');
       else if (n.data.nodeType === 'workload') classes.push('workload');
       if (n.data.isIdle) classes.push('idle');
@@ -294,12 +451,32 @@ async function refreshTopology() {
       e.classes = classes.join(' ');
     });
 
-    if (topoInstance) {
-      topoInstance.destroy();
-    }
-
     if (typeof cytoscape === 'undefined') {
       if (statusEl) statusEl.textContent = 'cytoscape not loaded';
+      return;
+    }
+
+    if (topoInstance) {
+      // Update existing graph without re-laying out
+      var existingIds = {};
+      topoInstance.nodes().forEach(function(n) { existingIds[n.id()] = true; });
+      // Add new nodes
+      elements.nodes.forEach(function(n) {
+        if (!existingIds[n.data.id]) topoInstance.add(n);
+      });
+      // Remove nodes that no longer exist
+      var newIds = {};
+      elements.nodes.forEach(function(n) { newIds[n.data.id] = true; });
+      topoInstance.nodes().forEach(function(n) {
+        if (!newIds[n.id()]) topoInstance.remove(n);
+      });
+      // Update edges
+      topoInstance.edges().remove();
+      elements.edges.forEach(function(e) { topoInstance.add(e); });
+
+      var nodeCount = elements.nodes.filter(function(n) { return !n.classes || n.classes.indexOf('ns-group') === -1; }).length;
+      var edgeCount = elements.edges.length;
+      if (statusEl) statusEl.textContent = nodeCount + ' nodes, ' + edgeCount + ' edges (updated)';
       return;
     }
 
@@ -312,10 +489,11 @@ async function refreshTopology() {
       elements: elements,
       layout: {
         name: 'dagre',
-        rankDir: 'LR',
-        nodeSep: 20,
-        rankSep: 60,
-        padding: 20
+        rankDir: 'TB',
+        nodeSep: 40,
+        rankSep: 80,
+        padding: 30,
+        spacingFactor: 1.3
       },
       style: [
         {
@@ -379,18 +557,44 @@ async function refreshTopology() {
           }
         },
         {
-          selector: 'node.idle',
-          style: { 'opacity': 0.5 }
+          selector: 'node.gateway',
+          style: {
+            'background-color': '#bc8cff',
+            'shape': 'diamond',
+            'label': 'data(label)',
+            'font-size': '9px',
+            'color': '#e6edf3',
+            'text-valign': 'bottom',
+            'text-margin-y': 4,
+            'width': 22,
+            'height': 22,
+            'border-width': 0
+          }
+        },
+        {
+          selector: 'node.external-gateway',
+          style: {
+            'background-color': '#f85149',
+            'shape': 'diamond',
+            'label': 'data(label)',
+            'font-size': '9px',
+            'color': '#e6edf3',
+            'text-valign': 'bottom',
+            'text-margin-y': 4,
+            'width': 22,
+            'height': 22,
+            'border-width': 0
+          }
         },
         {
           selector: 'edge',
           style: {
-            'width': 1,
-            'line-color': '#30363d',
-            'target-arrow-color': '#30363d',
+            'width': 2,
+            'line-color': '#484f58',
+            'target-arrow-color': '#484f58',
             'target-arrow-shape': 'triangle',
             'curve-style': 'bezier',
-            'arrow-scale': 0.6
+            'arrow-scale': 0.7
           }
         },
         {
@@ -398,7 +602,7 @@ async function refreshTopology() {
           style: {
             'line-color': '#3fb950',
             'target-arrow-color': '#3fb950',
-            'width': 2
+            'width': 3
           }
         },
         {
@@ -406,14 +610,24 @@ async function refreshTopology() {
           style: {
             'line-color': '#f85149',
             'target-arrow-color': '#f85149',
-            'width': 2
+            'width': 3
           }
         },
         {
           selector: 'edge.idle',
           style: {
             'line-style': 'dashed',
-            'opacity': 0.4
+            'opacity': 0.5
+          }
+        },
+        {
+          selector: 'edge.structural',
+          style: {
+            'line-color': '#484f58',
+            'target-arrow-color': '#484f58',
+            'line-style': 'solid',
+            'width': 2,
+            'opacity': 0.7
           }
         }
       ],

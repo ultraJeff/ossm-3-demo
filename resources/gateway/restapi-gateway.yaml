@@ -2,9 +2,9 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   labels:
-    app: hello-gateway
+    app: restapi-gateway
     version: v1
-  name: hello-gateway
+  name: restapi-gateway
   namespace: istio-ingress
 spec:
   gatewayClassName: istio
