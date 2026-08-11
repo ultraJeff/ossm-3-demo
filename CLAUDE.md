@@ -23,11 +23,15 @@ The demo includes two sample applications:
 - `opentelemetrycollector`: OpenTelemetry Collector for telemetry aggregation
 - `istio-system`: OSSM3 control plane, Kiali, and OSSMC plugin
 - `istio-cni`: Istio CNI components for pod networking
-- `istio-ingress`: Both Istio and Gateway API ingress gateways
+- `istio-ingress`: Gateway API ingress gateways (bookinfo-gateway, restapi-gateway, mesh-gateway)
 - `ossm-bookinfo`: Bookinfo sample application with traffic generator
-- `ossm-restapi`: Quarkus REST API with canary deployment capabilities
+- `ossm-restapi`: Quarkus REST API with canary deployment (HTTPRoute-based)
+- `ossm-httpbin`: httpbin + test-client for traffic management demos
+- `ossm-ai-models`: AI model serving (iris-onnx, phi-4-mini) with RHOAI
+- `ossm-mesh-demo`: Mesh enrollment demo logger
+- `ossm-enrollment-test`: Mesh enrollment demo pinger (not enrolled by default)
+- `llm`: LLM models (OPT-125M) — dual-homed with mesh + MaaS gateway
 - `ztunnel`: Ztunnel proxy for ambient mode L4 processing
-- `skupper-site`: Service Interconnect site (multi-cluster scenarios)
 
 ### Service Mesh Mode
 
