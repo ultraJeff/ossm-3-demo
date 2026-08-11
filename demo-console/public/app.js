@@ -252,7 +252,10 @@ function addNamespaceGroups(elements) {
   var nodeById = {};
   elements.nodes.forEach(function(n) { nodeById[n.data.id] = n.data; });
   var existingEdges = {};
-  elements.edges.forEach(function(e) { existingEdges[e.data.source + '->' + e.data.target] = true; });
+  elements.edges.forEach(function(e) {
+    existingEdges[e.data.source + '->' + e.data.target] = true;
+    existingEdges[e.data.target + '->' + e.data.source] = true;
+  });
 
   var edgeCounter = 0;
   function addStructEdge(srcId, tgtId) {
@@ -333,8 +336,8 @@ function addNamespaceGroups(elements) {
     classes: 'external-gateway'
   });
   elements.nodes.push({
-    data: { id: 'syn-rhoai-ns', label: 'openshift-ingress', nodeType: 'group' },
-    classes: 'ns-group'
+    data: { id: 'syn-rhoai-ns', label: 'openshift-ingress (external)', nodeType: 'group' },
+    classes: 'ns-group ns-external'
   });
   elements.nodes.forEach(function(n) {
     if (n.data.id === 'syn-rhoai-gw') n.data.parent = 'syn-rhoai-ns';
@@ -347,6 +350,13 @@ function addNamespaceGroups(elements) {
       addStructEdge('syn-rhoai-gw', wl.data.id);
     }
   });
+
+  // Add structural edge: mesh-pinger → mesh-logger (enrollment demo)
+  var pinger = elements.nodes.find(function(n) { return n.data.workload === 'mesh-pinger'; });
+  var logger = elements.nodes.find(function(n) { return n.data.workload === 'mesh-logger'; });
+  if (pinger && logger) {
+    addStructEdge(pinger.data.id, logger.data.id);
+  }
 
   // Add MaaS gateway if llm namespace is enrolled
   var llmNodes = elements.nodes.filter(function(n) { return n.data.namespace === 'llm'; });
@@ -457,27 +467,29 @@ async function refreshTopology() {
     }
 
     if (topoInstance) {
-      // Update existing graph without re-laying out
-      var existingIds = {};
-      topoInstance.nodes().forEach(function(n) { existingIds[n.id()] = true; });
-      // Add new nodes
-      elements.nodes.forEach(function(n) {
-        if (!existingIds[n.data.id]) topoInstance.add(n);
-      });
-      // Remove nodes that no longer exist
+      var oldIds = {};
+      topoInstance.nodes().forEach(function(n) { oldIds[n.id()] = true; });
       var newIds = {};
       elements.nodes.forEach(function(n) { newIds[n.data.id] = true; });
-      topoInstance.nodes().forEach(function(n) {
-        if (!newIds[n.id()]) topoInstance.remove(n);
-      });
-      // Update edges
-      topoInstance.edges().remove();
-      elements.edges.forEach(function(e) { topoInstance.add(e); });
 
-      var nodeCount = elements.nodes.filter(function(n) { return !n.classes || n.classes.indexOf('ns-group') === -1; }).length;
-      var edgeCount = elements.edges.length;
-      if (statusEl) statusEl.textContent = nodeCount + ' nodes, ' + edgeCount + ' edges (updated)';
-      return;
+      // Check if topology changed (different node set)
+      var changed = false;
+      elements.nodes.forEach(function(n) { if (!oldIds[n.data.id]) changed = true; });
+      topoInstance.nodes().forEach(function(n) { if (!newIds[n.id()]) changed = true; });
+
+      if (changed) {
+        // Topology changed — full rebuild with layout
+        topoInstance.destroy();
+        topoInstance = null;
+      } else {
+        // Same topology — just update edge styles
+        topoInstance.edges().remove();
+        elements.edges.forEach(function(e) { topoInstance.add(e); });
+        var nodeCount = elements.nodes.filter(function(n) { return !n.classes || n.classes.indexOf('ns-group') === -1; }).length;
+        var edgeCount = elements.edges.length;
+        if (statusEl) statusEl.textContent = nodeCount + ' nodes, ' + edgeCount + ' edges (updated)';
+        return;
+      }
     }
 
     if (typeof cytoscapeDagre !== 'undefined') {
@@ -510,6 +522,15 @@ async function refreshTopology() {
             'padding': '16px',
             'text-margin-y': -4,
             'shape': 'roundrectangle'
+          }
+        },
+        {
+          selector: 'node.ns-external',
+          style: {
+            'background-color': '#1c1510',
+            'border-color': '#f0883e',
+            'border-width': 2,
+            'border-style': 'dashed'
           }
         },
         {
