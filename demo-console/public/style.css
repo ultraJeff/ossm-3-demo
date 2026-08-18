@@ -74,7 +74,7 @@ header .subtitle {
 
 /* Topology graph */
 #topology-graph {
-  height: 500px;
+  height: 700px;
   background: #0d1117;
   border: 1px solid #30363d;
   border-radius: 6px;
@@ -102,6 +102,33 @@ header .subtitle {
   border-radius: 5px;
   margin-right: 4px;
   vertical-align: middle;
+}
+
+/* Collapsible layer sections */
+.layer-section {
+  margin-bottom: 16px;
+}
+
+.layer-section > summary {
+  padding: 10px 14px;
+  user-select: none;
+}
+
+.layer-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.layer-section > summary::before {
+  content: "\25B6";
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 10px;
+  color: #8b949e;
+  transition: transform 0.15s;
+}
+
+.layer-section[open] > summary::before {
+  transform: rotate(90deg);
 }
 
 /* Gantt chart */

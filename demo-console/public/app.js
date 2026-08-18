@@ -320,7 +320,7 @@ function addNamespaceGroups(elements) {
   var gatewayTargets = {
     'bookinfo-gateway-istio': 'ossm-bookinfo',
     'restapi-gateway-istio': 'ossm-restapi',
-    'mesh-gateway-istio': 'ossm-ai-models',
+    'ai-models-gateway-istio': 'ossm-ai-models',
   };
   workloads.forEach(function(gw) {
     var wlName = gw.data.workload || '';

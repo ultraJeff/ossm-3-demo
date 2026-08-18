@@ -334,67 +334,77 @@
         which mesh identities can reach which services.
       </div>
 
-      <div style="border-left:3px solid #d29922; padding-left:14px; margin-bottom:20px;">
-        <div style="color:#d29922; font-weight:700; font-size:16px; margin-bottom:8px;">Layer 1: PeerAuthentication</div>
-        <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
-          Enforced by ztunnel (L4). Controls whether pods accept connections without a valid mTLS certificate.
-          STRICT rejects connections without a mesh certificate. PERMISSIVE accepts both mTLS and plaintext.
-        </div>
+      <details class="layer-section" open>
+        <summary class="layer-header" style="border-left:3px solid #d29922; padding-left:14px; cursor:pointer; list-style:none;">
+          <span style="color:#d29922; font-weight:700; font-size:16px;">Layer 1: PeerAuthentication</span>
+          <span style="color:#8b949e; font-size:12px; margin-left:8px;">ztunnel &middot; L4</span>
+        </summary>
+        <div style="border-left:3px solid #d29922; padding-left:14px; padding-top:10px;">
+          <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
+            Controls whether pods accept connections without a valid mTLS certificate.
+            STRICT rejects connections without a mesh certificate. PERMISSIVE accepts both mTLS and plaintext.
+          </div>
 
-        <div class="action-group">
-          <div class="action-group-label">Set PeerAuthentication mode</div>
-          <button class="btn" onclick="runAction('/api/peer-auth/show', 'out-5a')">Show Current</button>
-          <button class="btn" onclick="runAction('/api/peer-auth/strict', 'out-5a', 'POST')">Set STRICT</button>
-          <button class="btn" onclick="runAction('/api/peer-auth/permissive', 'out-5a', 'POST')">Set PERMISSIVE</button>
-        </div>
-        <pre class="output" id="out-5a"></pre>
+          <div class="action-group">
+            <div class="action-group-label">Set PeerAuthentication mode</div>
+            <button class="btn" onclick="runAction('/api/peer-auth/show', 'out-5a')">Show Current</button>
+            <button class="btn" onclick="runAction('/api/peer-auth/strict', 'out-5a', 'POST')">Set STRICT</button>
+            <button class="btn" onclick="runAction('/api/peer-auth/permissive', 'out-5a', 'POST')">Set PERMISSIVE</button>
+          </div>
+          <pre class="output" id="out-5a"></pre>
 
-        <div class="action-group">
-          <div class="action-group-label">Test: can a pod outside the mesh reach a mesh service?</div>
-          <button class="btn" onclick="runAction('/api/test-bypass', 'out-5a2', 'POST')">Test Outside Mesh</button>
+          <div class="action-group">
+            <div class="action-group-label">Test: can a pod outside the mesh reach a mesh service?</div>
+            <button class="btn" onclick="runAction('/api/test-bypass', 'out-5a2', 'POST')">Test Outside Mesh</button>
+          </div>
+          <pre class="output" id="out-5a2"></pre>
         </div>
-        <pre class="output" id="out-5a2"></pre>
-      </div>
+      </details>
 
-      <div style="border-left:3px solid #58a6ff; padding-left:14px;">
-        <div style="color:#58a6ff; font-weight:700; font-size:16px; margin-bottom:8px;">Layer 2: AuthorizationPolicy</div>
-        <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
-          Enforced by waypoint (L7). Controls which SPIFFE identities can reach which services.
-          When a policy is applied, only the listed identities are allowed &mdash; all others are denied.
-        </div>
+      <details class="layer-section" open>
+        <summary class="layer-header" style="border-left:3px solid #58a6ff; padding-left:14px; cursor:pointer; list-style:none;">
+          <span style="color:#58a6ff; font-weight:700; font-size:16px;">Layer 2: AuthorizationPolicy</span>
+          <span style="color:#8b949e; font-size:12px; margin-left:8px;">waypoint &middot; L7</span>
+        </summary>
+        <div style="border-left:3px solid #58a6ff; padding-left:14px; padding-top:10px;">
+          <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
+            Controls which SPIFFE identities can reach which services.
+            When a policy is applied, only the listed identities are allowed &mdash; all others are denied.
+          </div>
 
-        <div style="color:#e6edf3; font-weight:700; font-size:14px; margin:16px 0 8px;">Restrict Pod-to-Pod Access</div>
-        <div style="color:#8b949e; font-size:12px; margin-bottom:8px;">Only the mesh-gateway identity can reach model services through the waypoint.</div>
-        <div class="action-group">
-          <button class="btn success" onclick="runAction('/api/authz-policy/apply-pod', 'out-5b', 'POST')">Apply Policy</button>
-          <button class="btn" onclick="runAction('/api/authz-policy/show-pod', 'out-5b')">Show YAML</button>
-          <button class="btn danger" onclick="runAction('/api/authz-policy/delete-pod', 'out-5b', 'POST')">Delete Policy</button>
-        </div>
-        <pre class="output" id="out-5b"></pre>
+          <div style="color:#e6edf3; font-weight:700; font-size:14px; margin:16px 0 8px;">Restrict Pod-to-Pod Access</div>
+          <div style="color:#8b949e; font-size:12px; margin-bottom:8px;">Only the ai-models-gateway identity can reach model services through the waypoint.</div>
+          <div class="action-group">
+            <button class="btn success" onclick="runAction('/api/authz-policy/apply-pod', 'out-5b', 'POST')">Apply Policy</button>
+            <button class="btn" onclick="runAction('/api/authz-policy/show-pod', 'out-5b')">Show YAML</button>
+            <button class="btn danger" onclick="runAction('/api/authz-policy/delete-pod', 'out-5b', 'POST')">Delete Policy</button>
+          </div>
+          <pre class="output" id="out-5b"></pre>
 
-        <div class="action-group">
-          <div class="action-group-label">Test access</div>
-          <button class="btn" onclick="runAction('/api/test-allowed-identity', 'out-5b2', 'POST')">Test from mesh-gateway</button>
-          <button class="btn" onclick="runAction('/api/test-pod-to-pod', 'out-5b2', 'POST')">Test from test-client</button>
-        </div>
-        <pre class="output" id="out-5b2"></pre>
+          <div class="action-group">
+            <div class="action-group-label">Test access</div>
+            <button class="btn" onclick="runAction('/api/test-allowed-identity', 'out-5b2', 'POST')">Test from ai-models-gateway</button>
+            <button class="btn" onclick="runAction('/api/test-pod-to-pod', 'out-5b2', 'POST')">Test from test-client</button>
+          </div>
+          <pre class="output" id="out-5b2"></pre>
 
-        <div style="color:#e6edf3; font-weight:700; font-size:14px; margin:16px 0 8px;">Restrict Cross-Namespace Access</div>
-        <div style="color:#8b949e; font-size:12px; margin-bottom:8px;">Only pods in ossm-restapi and istio-ingress can reach restapi services.</div>
-        <div class="action-group">
-          <button class="btn success" onclick="runAction('/api/authz-policy/apply-cross-ns', 'out-5c', 'POST')">Apply Policy</button>
-          <button class="btn" onclick="runAction('/api/authz-policy/show-cross-ns', 'out-5c')">Show YAML</button>
-          <button class="btn danger" onclick="runAction('/api/authz-policy/delete-cross-ns', 'out-5c', 'POST')">Delete Policy</button>
-        </div>
-        <pre class="output" id="out-5c"></pre>
+          <div style="color:#e6edf3; font-weight:700; font-size:14px; margin:16px 0 8px;">Restrict Cross-Namespace Access</div>
+          <div style="color:#8b949e; font-size:12px; margin-bottom:8px;">Only pods in ossm-restapi and istio-ingress can reach restapi services.</div>
+          <div class="action-group">
+            <button class="btn success" onclick="runAction('/api/authz-policy/apply-cross-ns', 'out-5c', 'POST')">Apply Policy</button>
+            <button class="btn" onclick="runAction('/api/authz-policy/show-cross-ns', 'out-5c')">Show YAML</button>
+            <button class="btn danger" onclick="runAction('/api/authz-policy/delete-cross-ns', 'out-5c', 'POST')">Delete Policy</button>
+          </div>
+          <pre class="output" id="out-5c"></pre>
 
-        <div class="action-group">
-          <div class="action-group-label">Test access</div>
-          <button class="btn" onclick="runAction('/api/test-same-namespace', 'out-5c2', 'POST')">Test from ossm-restapi</button>
-          <button class="btn" onclick="runAction('/api/test-cross-namespace', 'out-5c2', 'POST')">Test from ossm-httpbin</button>
+          <div class="action-group">
+            <div class="action-group-label">Test access</div>
+            <button class="btn" onclick="runAction('/api/test-same-namespace', 'out-5c2', 'POST')">Test from ossm-restapi</button>
+            <button class="btn" onclick="runAction('/api/test-cross-namespace', 'out-5c2', 'POST')">Test from ossm-httpbin</button>
+          </div>
+          <pre class="output" id="out-5c2"></pre>
         </div>
-        <pre class="output" id="out-5c2"></pre>
-      </div>
+      </details>
     </div>
   </div>
 

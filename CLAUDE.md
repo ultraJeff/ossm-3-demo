@@ -23,7 +23,7 @@ The demo includes two sample applications:
 - `opentelemetrycollector`: OpenTelemetry Collector for telemetry aggregation
 - `istio-system`: OSSM3 control plane, Kiali, and OSSMC plugin
 - `istio-cni`: Istio CNI components for pod networking
-- `istio-ingress`: Gateway API ingress gateways (bookinfo-gateway, restapi-gateway, mesh-gateway)
+- `istio-ingress`: Gateway API ingress gateways (bookinfo-gateway, restapi-gateway, ai-models-gateway)
 - `ossm-bookinfo`: Bookinfo sample application with traffic generator
 - `ossm-restapi`: Quarkus REST API with canary deployment (HTTPRoute-based)
 - `ossm-httpbin`: httpbin + test-client for traffic management demos

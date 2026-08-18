@@ -455,7 +455,7 @@ if [ -n "$RESULT" ]; then
   echo 'This request was encrypted end-to-end via mTLS -- the model'
   echo 'runtime served plain HTTP, ztunnel handled all encryption.'
 else
-  echo 'No response from model. Check that the mesh-gateway route and'
+  echo 'No response from model. Check that the ai-models-gateway route and'
   echo 'iris-onnx InferenceService are running.'
 fi`);
   res.json(result);
@@ -548,7 +548,7 @@ for line in sys.stdin:
 app.get('/api/peer-auth/show', async (req, res) => {
   const result = await run(`echo '=== PeerAuthentication policies ==='
 echo ''
-oc get peerauthentication -A --no-headers 2>/dev/null | grep -v ossm-mesh-demo
+oc get peerauthentication -A --no-headers 2>/dev/null
 echo ''
 echo '=== What this means ==='
 echo ''
@@ -608,7 +608,7 @@ app.post('/api/authz-policy/apply-pod', async (req, res) => {
   const targetNs = MODULES.models ? MODELS_NS : 'ossm-bookinfo';
   const targetGateway = MODULES.models ? 'ai-models-waypoint' : 'bookinfo-waypoint';
   const principals = MODULES.models
-    ? [`cluster.local/ns/istio-system/sa/mesh-gateway-istio`, `cluster.local/ns/${MODELS_NS}/sa/ai-models-waypoint`]
+    ? [`cluster.local/ns/istio-system/sa/ai-models-gateway-istio`, `cluster.local/ns/${MODELS_NS}/sa/ai-models-waypoint`]
     : ['cluster.local/ns/istio-ingress/sa/istio-ingressgateway'];
   const principalsYaml = principals.map(p => `              - "${p}"`).join('\n');
 
@@ -697,8 +697,8 @@ app.get('/api/authz-policy/status', async (req, res) => {
 app.post('/api/test-allowed-identity', async (req, res) => {
   const result = await run(`echo 'Test: Can the gateway identity reach the model service?'
 echo ''
-echo '  Identity: spiffe://cluster.local/ns/istio-system/sa/mesh-gateway-istio'
-echo '  Path: external request -> mesh-gateway -> waypoint -> model'
+echo '  Identity: spiffe://cluster.local/ns/istio-system/sa/ai-models-gateway-istio'
+echo '  Path: external request -> ai-models-gateway -> waypoint -> model'
 echo ''
 CODE=$(curl -sk -o /dev/null -w '%{http_code}' --connect-timeout 5 https://iris-onnx.${DOMAIN}/v2/models/iris-onnx 2>/dev/null)
 if [ "$CODE" = "200" ]; then
