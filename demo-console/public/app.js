@@ -414,6 +414,7 @@ async function refreshTopology() {
       var wl = n.data.workload || '';
       // Remove prometheus/monitoring namespaces
       if (ns === 'openshift-user-workload-monitoring') return false;
+      if (ns.indexOf('redhat-ods-') === 0) return false;
       if (ns === 'istio-system') return false;
       // Filter legacy ingress gateway
       if (wl === 'istio-ingressgateway') return false;

@@ -438,33 +438,35 @@ fi`);
 // --- AI Models (if ossm-ai-models namespace exists) ---
 
 app.get('/api/models/status', async (req, res) => {
-  const result = await run(`oc get inferenceservice,servingruntime -n ${MODELS_NS} 2>/dev/null`);
-  res.json(result);
+  const models = await run(`echo '=== ${MODELS_NS} ==='
+oc get inferenceservice,servingruntime -n ${MODELS_NS} 2>/dev/null
+echo ''
+echo '=== llm ==='
+oc get deploy -n llm --no-headers 2>/dev/null | grep -v waypoint`);
+  res.json(models);
 });
 
 app.post('/api/models/infer-iris', async (req, res) => {
-  const result = await run(`echo '$ curl -sk https://iris-onnx.${DOMAIN}/v2/models/iris-onnx/infer \\\\'
-echo '    -H "Content-Type: application/json" \\\\'
-echo '    -d '"'"'{"inputs":[{"name":"input","shape":[1,4],"datatype":"FP32","data":[5.1,3.5,1.4,0.2]}]}'"'"''
+  const result = await run(`echo 'North-south call via external route + Gateway API'
+echo 'Path: browser -> OCP Route -> ai-models-gateway (Envoy) -> ztunnel -> waypoint -> iris-onnx'
+echo ''
+echo '$ curl -sk https://iris-onnx.${DOMAIN}/v2/models/iris-onnx/infer'
 echo ''
 RESULT=$(curl -sk https://iris-onnx.${DOMAIN}/v2/models/iris-onnx/infer -H 'Content-Type: application/json' -d '{"inputs":[{"name":"input","shape":[1,4],"datatype":"FP32","data":[5.1,3.5,1.4,0.2]}]}' 2>/dev/null)
 if [ -n "$RESULT" ]; then
   echo "$RESULT" | jq .
-  echo ''
-  echo 'The model classified the input as iris class 0 (setosa).'
-  echo 'This request was encrypted end-to-end via mTLS -- the model'
-  echo 'runtime served plain HTTP, ztunnel handled all encryption.'
 else
-  echo 'No response from model. Check that the ai-models-gateway route and'
-  echo 'iris-onnx InferenceService are running.'
+  echo 'No response. Check the OCP Route and ai-models-gateway.'
 fi`);
   res.json(result);
 });
 
 app.post('/api/models/infer-phi4', async (req, res) => {
-  const result = await run(`echo 'OPT-125M -- OpenAI-compatible chat completion (llm namespace)'
+  const result = await run(`echo 'East-west call via internal Service DNS (cross-namespace)'
+echo 'Path: test-client (${MODELS_NS}) -> ztunnel -> llm namespace -> OPT-125M'
+echo 'This call goes pod-to-pod over mTLS, not through a gateway or route.'
 echo ''
-echo '$ curl -sk https://facebook-opt-125m-simulated-kserve-workload-svc.llm.svc:8000/v1/chat/completions'
+echo '$ oc exec test-client -- curl -sk https://facebook-opt-125m-...svc:8000/v1/chat/completions'
 echo ''
 RESULT=$(oc exec -n ${MODELS_NS} deploy/test-client -- curl -sk --connect-timeout 10 --max-time 30 https://facebook-opt-125m-simulated-kserve-workload-svc.llm.svc:8000/v1/chat/completions -H 'Content-Type: application/json' -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"What is a service mesh?"}],"max_tokens":50}' 2>/dev/null)
 if [ -n "$RESULT" ]; then
@@ -475,9 +477,6 @@ if [ -n "$RESULT" ]; then
   else
     echo "$RESULT" | jq . 2>/dev/null || echo "$RESULT"
   fi
-  echo ''
-  echo 'This request went cross-namespace: ossm-ai-models -> llm'
-  echo 'Both namespaces are mesh-enrolled. ztunnel encrypted the connection.'
 else
   echo 'No response. Check that the model is running:'
   echo '  oc get pods -n llm'
