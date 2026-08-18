@@ -439,16 +439,23 @@ fi`);
 
 app.get('/api/models/status', async (req, res) => {
   const models = await run(`echo '=== ${MODELS_NS} ==='
-oc get inferenceservice,servingruntime -n ${MODELS_NS} 2>/dev/null
+echo 'NAME          READY  URL'
+oc get inferenceservice -n ${MODELS_NS} -o custom-columns='NAME:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,URL:.status.url' --no-headers 2>/dev/null
+echo ''
+echo 'RUNTIME              MODEL_TYPE'
+oc get servingruntime -n ${MODELS_NS} -o custom-columns='RUNTIME:.metadata.name,MODEL_TYPE:.spec.supportedModelFormats[0].name' --no-headers 2>/dev/null
 echo ''
 echo '=== llm ==='
-oc get deploy -n llm --no-headers 2>/dev/null | grep -v waypoint`);
+echo 'NAME                                    READY  AGE'
+oc get deploy -n llm --no-headers 2>/dev/null | grep -v waypoint | awk '{printf "%-40s %s    %s\\n", $1, $2, $5}'
+`);
   res.json(models);
 });
 
 app.post('/api/models/infer-iris', async (req, res) => {
   const result = await run(`echo 'North-south call via external route + Gateway API'
-echo 'Path: browser -> OCP Route -> ai-models-gateway (Envoy) -> ztunnel -> waypoint -> iris-onnx'
+echo 'Called from: this console (external to the cluster)'
+echo 'Path: console -> OCP Route -> ai-models-gateway (Envoy) -> ztunnel -> waypoint -> iris-onnx'
 echo ''
 echo '$ curl -sk https://iris-onnx.${DOMAIN}/v2/models/iris-onnx/infer'
 echo ''
@@ -463,8 +470,8 @@ fi`);
 
 app.post('/api/models/infer-phi4', async (req, res) => {
   const result = await run(`echo 'East-west call via internal Service DNS (cross-namespace)'
-echo 'Path: test-client (${MODELS_NS}) -> ztunnel -> llm namespace -> OPT-125M'
-echo 'This call goes pod-to-pod over mTLS, not through a gateway or route.'
+echo 'Called from: test-client pod in ${MODELS_NS} (inside the mesh)'
+echo 'Path: test-client -> ztunnel -> llm namespace -> OPT-125M'
 echo ''
 echo '$ oc exec test-client -- curl -sk https://facebook-opt-125m-...svc:8000/v1/chat/completions'
 echo ''
