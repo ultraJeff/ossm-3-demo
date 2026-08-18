@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-console
+  namespace: ossm-demo-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-console
+  template:
+    metadata:
+      labels:
+        app: demo-console
+    spec:
+      serviceAccountName: demo-console
+      containers:
+        - name: console
+          image: image-registry.openshift-image-registry.svc:5000/ossm-demo-console/demo-console:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-console
+  namespace: ossm-demo-console
+spec:
+  selector:
+    app: demo-console
+  ports:
+    - port: 3000
+      targetPort: 3000
+      name: http
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: demo-console
+  namespace: ossm-demo-console
+spec:
+  to:
+    kind: Service
+    name: demo-console
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

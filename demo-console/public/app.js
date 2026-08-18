@@ -28,8 +28,12 @@ function showOutput(id, data) {
   var text = typeof data === 'string' ? data : (data.output || JSON.stringify(data, null, 2));
   el.textContent = text.trim() || '(no output)';
   el.classList.add('visible');
-  el.classList.toggle('error', data.exitCode > 0);
-  el.classList.toggle('success-border', data.exitCode === 0);
+  el.classList.remove('error', 'success-border');
+  // Color based on HTTP status in output, not just exitCode
+  var hasError = /HTTP (000|4\d\d|5\d\d)|BLOCKED|FORBIDDEN|DENIED/i.test(text);
+  var hasSuccess = /HTTP 200|ACCESS GRANTED/i.test(text);
+  if (hasError) el.classList.add('error');
+  else if (hasSuccess) el.classList.add('success-border');
 }
 
 async function runAction(path, outputId, method) {
@@ -351,6 +355,13 @@ function addNamespaceGroups(elements) {
     }
   });
 
+  // Add structural edge: ossm-ai-models test-client → llm models (cross-namespace inference)
+  var aiTestClient = elements.nodes.find(function(n) { return n.data.workload === 'test-client' && n.data.namespace === MODELS_NS_FRONTEND; });
+  var llmModels = elements.nodes.filter(function(n) { return n.data.namespace === 'llm' && n.data.nodeType === 'workload' && !isWaypoint(n); });
+  if (aiTestClient) {
+    llmModels.forEach(function(m) { addStructEdge(aiTestClient.data.id, m.data.id); });
+  }
+
   // Add structural edge: mesh-pinger → mesh-logger (enrollment demo)
   var pinger = elements.nodes.find(function(n) { return n.data.workload === 'mesh-pinger'; });
   var logger = elements.nodes.find(function(n) { return n.data.workload === 'mesh-logger'; });
@@ -492,8 +503,9 @@ async function refreshTopology() {
       }
     }
 
-    if (typeof cytoscapeDagre !== 'undefined') {
+    if (typeof cytoscapeDagre !== 'undefined' && !cytoscape.prototype._cytoscapeDagreRegistered) {
       cytoscape.use(cytoscapeDagre);
+      cytoscape.prototype._cytoscapeDagreRegistered = true;
     }
 
     topoInstance = cytoscape({

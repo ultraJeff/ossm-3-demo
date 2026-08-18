@@ -5,4 +5,4 @@ metadata:
   labels:
     opendatahub.io/dashboard: "true"
     istio.io/dataplane-mode: ambient
-    istio.io/use-waypoint: mesh-waypoint
+    istio.io/use-waypoint: ai-models-waypoint

@@ -17,16 +17,32 @@ app.use(express.json());
 
 function run(cmd) {
   return new Promise((resolve) => {
-    exec(cmd, { timeout: TIMEOUT, shell: '/bin/zsh' }, (err, stdout, stderr) => {
+    exec(cmd, { timeout: TIMEOUT, shell: '/bin/bash' }, (err, stdout, stderr) => {
       resolve({ output: stdout || stderr || (err ? err.message : ''), exitCode: err ? err.code || 1 : 0 });
     });
   });
 }
 
-const YAML_CLEAN = "grep -v '^ *creationTimestamp:\\|^ *generation:\\|^ *resourceVersion:\\|^ *uid:\\|^ *managedFields:\\|^ *- manager:\\|^ *operation:\\|^ *time:\\|^ *fieldsType:\\|^ *fieldsV1:\\|^ *f:\\|^ *kubectl.kubernetes.io/last-applied-configuration:\\|^ *argocd.argoproj.io' | sed '/^  annotations:/{N;/annotations:\\n *$/d}'";
-
-function cleanYaml(cmd) {
-  return cmd + ' | ' + YAML_CLEAN;
+async function runCleanYaml(cmd) {
+  var result = await run(cmd);
+  if (result.exitCode !== 0 || !result.output.trim()) return result;
+  var lines = result.output.split('\n');
+  var filtered = [];
+  var skip = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    // Skip status section entirely
+    if (/^status:/.test(line)) break;
+    // Skip annotations block
+    if (/^  annotations:/.test(line)) { skip = true; continue; }
+    if (skip && /^    /.test(line)) continue;
+    if (skip && !/^    /.test(line)) skip = false;
+    // Skip noisy metadata fields
+    if (/creationTimestamp|generation:|resourceVersion|uid:|managedFields|fieldsType|fieldsV1|^ *f:|^ *manager:|^ *operation:|^ *time: /.test(line)) continue;
+    filtered.push(line);
+  }
+  result.output = filtered.filter(function(l) { return l.trim() !== ''; }).join('\n');
+  return result;
 }
 
 // --- Auto-detection ---
@@ -304,7 +320,7 @@ echo "Results: $PASS succeeded, $FAIL failed out of 10 requests"
 });
 
 app.get('/api/bookinfo/gateway', async (req, res) => {
-  const gw = await run(cleanYaml('oc get gateway bookinfo-gateway -n istio-ingress -o yaml 2>/dev/null'));
+  const gw = await runCleanYaml('oc get gateway bookinfo-gateway -n istio-ingress -o yaml 2>/dev/null');
   const routes = await run('oc get httproute -n ossm-bookinfo 2>/dev/null');
   res.json({ output: '=== Gateway ===\n' + gw.output + '\n=== HTTPRoutes ===\n' + routes.output, exitCode: 0 });
 });
@@ -339,7 +355,7 @@ curl -s "$GATEWAY/hello-service" 2>/dev/null | jq . 2>/dev/null || curl -s "$GAT
 });
 
 app.get('/api/restapi/canary', async (req, res) => {
-  const hr = await run(cleanYaml('oc get httproute service-b-canary -n ossm-restapi -o yaml 2>/dev/null'));
+  const hr = await runCleanYaml('oc get httproute service-b-canary -n ossm-restapi -o yaml 2>/dev/null');
   if (hr.exitCode !== 0 || !hr.output.trim()) {
     res.json({ output: 'No HTTPRoute canary configuration found.', exitCode: 1 });
     return;
@@ -590,9 +606,9 @@ echo "Pods outside the mesh CAN reach these services."`);
 
 app.post('/api/authz-policy/apply-pod', async (req, res) => {
   const targetNs = MODULES.models ? MODELS_NS : 'ossm-bookinfo';
-  const targetGateway = MODULES.models ? 'mesh-waypoint' : 'bookinfo-waypoint';
+  const targetGateway = MODULES.models ? 'ai-models-waypoint' : 'bookinfo-waypoint';
   const principals = MODULES.models
-    ? [`cluster.local/ns/istio-system/sa/mesh-gateway-istio`, `cluster.local/ns/${MODELS_NS}/sa/mesh-waypoint`]
+    ? [`cluster.local/ns/istio-system/sa/mesh-gateway-istio`, `cluster.local/ns/${MODELS_NS}/sa/ai-models-waypoint`]
     : ['cluster.local/ns/istio-ingress/sa/istio-ingressgateway'];
   const principalsYaml = principals.map(p => `              - "${p}"`).join('\n');
 
@@ -623,7 +639,8 @@ echo "test-client (different identity) will get 403."`);
 
 app.get('/api/authz-policy/show-pod', async (req, res) => {
   const targetNs = MODULES.models ? MODELS_NS : 'ossm-bookinfo';
-  const result = await run(cleanYaml(`oc get authorizationpolicy demo-restrict-access -n ${targetNs} -o yaml 2>/dev/null`) + ` || echo "No pod-to-pod AuthorizationPolicy applied"`);
+  var result = await runCleanYaml(`oc get authorizationpolicy demo-restrict-access -n ${targetNs} -o yaml 2>/dev/null`);
+  if (!result.output.trim()) result = { output: 'No pod-to-pod AuthorizationPolicy applied', exitCode: 1 };
   res.json(result);
 });
 
@@ -661,7 +678,8 @@ echo "Pods in ossm-httpbin (different namespace) will get 403."`);
 });
 
 app.get('/api/authz-policy/show-cross-ns', async (req, res) => {
-  const result = await run(cleanYaml('oc get authorizationpolicy demo-restrict-cross-ns -n ossm-restapi -o yaml 2>/dev/null') + ' || echo "No cross-namespace AuthorizationPolicy applied"');
+  var result = await runCleanYaml('oc get authorizationpolicy demo-restrict-cross-ns -n ossm-restapi -o yaml 2>/dev/null');
+  if (!result.output.trim()) result = { output: 'No cross-namespace AuthorizationPolicy applied', exitCode: 1 };
   res.json(result);
 });
 
@@ -843,29 +861,17 @@ app.get('/api/audit', async (req, res) => {
 
 app.get('/api/traffic-policy/status', async (req, res) => {
   const hrCheck = await run('oc get httproute httpbin-timeout -n ossm-httpbin --no-headers 2>/dev/null');
-  const vsCheck = await run('oc get virtualservice httpbin-retries -n ossm-httpbin --no-headers 2>/dev/null');
-  const hrActive = hrCheck.output.trim().length > 0 && hrCheck.exitCode === 0;
-  const vsActive = vsCheck.output.trim().length > 0 && vsCheck.exitCode === 0;
-  const active = hrActive || vsActive;
+  const active = hrCheck.output.trim().length > 0 && hrCheck.exitCode === 0;
   if (!active) {
-    res.json({ active, output: 'No traffic policy applied.\n\nApply the traffic policy to add a 5s timeout (HTTPRoute)\nand 3x retries on 5xx (VirtualService) to httpbin.' });
+    res.json({ active, output: 'No traffic policy applied.\n\nApply the timeout policy to add a 5s request timeout via HTTPRoute.' });
     return;
   }
-  let output = '';
-  if (hrActive) {
-    const hr = await run("oc get httproute httpbin-timeout -n ossm-httpbin -o jsonpath='{.spec.rules[0].timeouts}' 2>/dev/null");
-    output += 'HTTPRoute: httpbin-timeout\n  Timeout: ' + hr.output.replace(/'/g, '') + '\n\n';
-  }
-  if (vsActive) {
-    const vs = await run("oc get virtualservice httpbin-retries -n ossm-httpbin -o jsonpath='{.spec.http[0].retries}' 2>/dev/null");
-    output += 'VirtualService: httpbin-retries\n  Retries: ' + vs.output.replace(/'/g, '') + '\n';
-  }
-  res.json({ active, output });
+  const result = await runCleanYaml('oc get httproute httpbin-timeout -n ossm-httpbin -o yaml 2>/dev/null');
+  res.json({ active, output: result.output });
 });
 
 app.post('/api/traffic-policy/apply', async (req, res) => {
-  const result = await run(`echo '=== Applying HTTPRoute for timeout ==='
-oc apply -f - <<'EOF' 2>&1
+  const result = await run(`oc apply -f - <<'EOF' 2>&1
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -885,37 +891,13 @@ spec:
         request: 5s
 EOF
 echo ''
-echo '=== Applying VirtualService for retries ==='
-oc apply -f - <<'EOF2' 2>&1
-apiVersion: networking.istio.io/v1
-kind: VirtualService
-metadata:
-  name: httpbin-retries
-  namespace: ossm-httpbin
-spec:
-  hosts:
-    - httpbin.ossm-httpbin.svc.cluster.local
-  http:
-    - route:
-        - destination:
-            host: httpbin.ossm-httpbin.svc.cluster.local
-            port:
-              number: 80
-      retries:
-        attempts: 5
-        perTryTimeout: 3s
-        retryOn: "5xx"
-EOF2
-echo ''
-echo 'Applied: HTTPRoute (5s timeout) + VirtualService (5x retries on 5xx)'
-echo 'HTTPRoute handles timeouts natively. Retries require VirtualService'
-echo 'until Gateway API adds retry support to the spec.'`);
+echo 'Applied: HTTPRoute httpbin-timeout (5s request timeout)'
+echo 'The waypoint will cut off any response that takes longer than 5 seconds.'`);
   res.json(result);
 });
 
 app.post('/api/traffic-policy/delete', async (req, res) => {
-  const result = await run(`oc delete httproute httpbin-timeout -n ossm-httpbin 2>&1
-oc delete virtualservice httpbin-retries -n ossm-httpbin 2>&1`);
+  const result = await run('oc delete httproute httpbin-timeout -n ossm-httpbin 2>&1');
   res.json(result);
 });
 
