@@ -27,126 +27,6 @@
 <div id="app">
 <div id="main">
 
-  <!-- Option A: Components (no OSI labels) -->
-  <div class="gantt-chart">
-    <div class="gantt-title">Option A: Mesh Lifecycle by Component</div>
-    <div class="gantt-grid">
-      <div class="gantt-header">
-        <div class="gantt-label-col"></div>
-        <div class="gantt-bar-col">
-          <span>Install</span>
-          <span>Configure</span>
-          <span>Enroll</span>
-          <span>Traffic flows</span>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">istiod</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar blue" style="left:0%; width:100%;">
-            <span class="gantt-bar-text">control plane &mdash; certificates, xDS config, SPIFFE identity</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">istio-cni</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar yellow" style="left:0%; width:40%;">
-            <span class="gantt-bar-text">iptables redirect on pod start</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">ztunnel</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar green" style="left:15%; width:85%;">
-            <span class="gantt-bar-text">per-node proxy &mdash; mTLS, HBONE tunnels, TCP metrics</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">waypoint</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar orange" style="left:40%; width:60%;">
-            <span class="gantt-bar-text">per-namespace Envoy &mdash; AuthzPolicy, timeouts, traffic splitting</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">application</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar dim" style="left:0%; width:100%;">
-            <span class="gantt-bar-text">runs unchanged throughout</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Option B: OSI Layers -->
-  <div class="gantt-chart">
-    <div class="gantt-title">Option B: Mesh Lifecycle by Network Layer</div>
-    <div class="gantt-grid">
-      <div class="gantt-header">
-        <div class="gantt-label-col"></div>
-        <div class="gantt-bar-col">
-          <span>Install</span>
-          <span>Configure</span>
-          <span>Enroll</span>
-          <span>Traffic flows</span>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">L2/L3</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar dim" style="left:0%; width:100%;">
-            <span class="gantt-bar-text">OVN-Kubernetes &mdash; pod networking (exists before the mesh)</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">L3/L4 rules</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar yellow" style="left:0%; width:40%;">
-            <span class="gantt-bar-text">istio-cni &mdash; iptables redirect to ztunnel ports</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">L4 + mTLS</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar green" style="left:15%; width:85%;">
-            <span class="gantt-bar-text">ztunnel &mdash; TCP proxy, HBONE tunnels, PeerAuthentication</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">L5/L6</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar blue" style="left:10%; width:90%;">
-            <span class="gantt-bar-text">mTLS sessions &mdash; SPIFFE identity, certificate exchange</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">L7</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar orange" style="left:40%; width:60%;">
-            <span class="gantt-bar-text">waypoint Envoy &mdash; HTTP routing, AuthzPolicy, timeouts</span>
-          </div>
-        </div>
-      </div>
-      <div class="gantt-row">
-        <div class="gantt-label">Application</div>
-        <div class="gantt-bar-col">
-          <div class="gantt-bar dim" style="left:0%; width:100%;">
-            <span class="gantt-bar-text">runs unchanged throughout</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Live Topology -->
   <div class="section open" data-module="core">
     <div class="section-header" onclick="toggleSection(this)">
@@ -166,100 +46,6 @@
         <span><span class="legend-dot" style="background:#bc8cff; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> Gateway</span>
         <span><span class="legend-dot" style="background:#d29922; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> Waypoint</span>
         <span><span class="legend-dot" style="background:#f85149; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> External Gateway</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- Architecture Diagram -->
-  <div class="arch-diagram">
-    <div class="arch-title">Service Mesh 3 &mdash; Ambient Mode Architecture</div>
-    <div class="arch-grid">
-      <!-- Control Plane row -->
-      <div class="arch-row arch-control-plane">
-        <div class="arch-label">Control Plane</div>
-        <div class="arch-box blue">
-          <div class="arch-box-title">istiod</div>
-          <div class="arch-box-detail">Certs, config, xDS</div>
-        </div>
-        <div class="arch-box blue">
-          <div class="arch-box-title">Istio CNI</div>
-          <div class="arch-box-detail">iptables on pod start</div>
-        </div>
-        <div class="arch-box blue">
-          <div class="arch-box-title">Kiali</div>
-          <div class="arch-box-detail">Topology &amp; traces</div>
-        </div>
-      </div>
-
-      <!-- Dashed line separator -->
-      <div class="arch-separator">
-        <span>data plane</span>
-      </div>
-
-      <!-- Data Plane - North/South -->
-      <div class="arch-row arch-data-plane">
-        <div class="arch-label">North/South</div>
-        <div class="arch-flow">
-          <div class="arch-box green">
-            <div class="arch-box-title">Client</div>
-          </div>
-          <div class="arch-arrow">&rarr;</div>
-          <div class="arch-box green highlight">
-            <div class="arch-box-title">Gateway</div>
-            <div class="arch-box-detail">Envoy (class: istio)</div>
-            <div class="arch-policy">HTTPRoute<br>GatewayClass</div>
-          </div>
-          <div class="arch-arrow">&rarr;</div>
-          <div class="arch-box yellow highlight">
-            <div class="arch-box-title">ztunnel</div>
-            <div class="arch-box-detail">L4 mTLS + HBONE</div>
-            <div class="arch-policy">PeerAuth<br>iptables redirect</div>
-          </div>
-          <div class="arch-arrow hbone">=== mTLS ===&rarr;</div>
-          <div class="arch-box yellow highlight">
-            <div class="arch-box-title">ztunnel</div>
-            <div class="arch-box-detail">Dest node</div>
-          </div>
-          <div class="arch-arrow">&rarr;</div>
-          <div class="arch-box green highlight">
-            <div class="arch-box-title">Waypoint</div>
-            <div class="arch-box-detail">Envoy L7 (optional)</div>
-            <div class="arch-policy">AuthzPolicy<br>VirtualService</div>
-          </div>
-          <div class="arch-arrow">&rarr;</div>
-          <div class="arch-box green">
-            <div class="arch-box-title">Pod</div>
-            <div class="arch-box-detail">plain HTTP</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Data Plane - East/West -->
-      <div class="arch-row arch-data-plane">
-        <div class="arch-label">East/West</div>
-        <div class="arch-flow">
-          <div class="arch-box green">
-            <div class="arch-box-title">Pod A</div>
-            <div class="arch-box-detail">plain HTTP</div>
-          </div>
-          <div class="arch-arrow">&rarr;</div>
-          <div class="arch-box yellow highlight">
-            <div class="arch-box-title">ztunnel</div>
-            <div class="arch-box-detail">Source node</div>
-            <div class="arch-policy">SPIFFE identity</div>
-          </div>
-          <div class="arch-arrow hbone">=== HBONE mTLS ===&rarr;</div>
-          <div class="arch-box yellow highlight">
-            <div class="arch-box-title">ztunnel</div>
-            <div class="arch-box-detail">Dest node</div>
-            <div class="arch-policy">PeerAuth check</div>
-          </div>
-          <div class="arch-arrow">&rarr;</div>
-          <div class="arch-box green">
-            <div class="arch-box-title">Pod B</div>
-            <div class="arch-box-detail">plain HTTP</div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -490,13 +276,13 @@
       </div>
 
       <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
-        <div style="color:#58a6ff; font-weight:600; margin-bottom:8px;">Via mesh-gateway (HTTPRoute + OCP Route passthrough*)</div>
+        <div style="color:#58a6ff; font-weight:600; margin-bottom:8px;">Via ai-models-gateway (HTTPRoute + OCP Route passthrough*)</div>
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
           <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">Client</div>
           <span style="color:#8b949e;">&rarr;</span>
           <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;"><span style="color:#8b949e;">OCP Route</span><br><span style="color:#8b949e; font-size:10px;">TLS passthrough</span></div>
           <span style="color:#8b949e;">&rarr;</span>
-          <div style="border:1px solid #58a6ff; border-radius:4px; padding:4px 8px;"><span style="color:#58a6ff;">mesh-gateway</span><br><span style="color:#8b949e; font-size:10px;">HTTPRoute</span></div>
+          <div style="border:1px solid #58a6ff; border-radius:4px; padding:4px 8px;"><span style="color:#58a6ff;">ai-models-gateway</span><br><span style="color:#8b949e; font-size:10px;">HTTPRoute</span></div>
           <span style="color:#d29922;">=ztunnel=&rarr;</span>
           <div style="border:1px solid #d29922; border-radius:4px; padding:4px 8px;"><span style="color:#d29922;">Waypoint</span><br><span style="color:#8b949e; font-size:10px;">AuthzPolicy</span></div>
           <span style="color:#3fb950;">=mTLS=&rarr;</span>
@@ -517,7 +303,7 @@
           </div>
         </div>
         <div style="color:#d29922; margin-top:8px; font-size:11px;">
-          RHOAI provides its own gateway but without mesh mTLS. Our mesh-gateway adds encryption, identity, and policy.<br>
+          RHOAI provides its own gateway but without mesh mTLS. Our ai-models-gateway adds encryption, identity, and policy.<br>
           <span style="color:#8b949e;">*OCP Routes are only needed because *.apps DNS points to the OCP router. With direct DNS to the gateway LB, Routes are unnecessary.</span>
         </div>
       </div>
@@ -677,6 +463,163 @@
         <div class="action-group-label">Open dashboards</div>
         <a class="link-btn" id="link-kiali" href="#" target="_blank">Open Kiali Dashboard</a>
         <a class="link-btn" id="link-console" href="#" target="_blank">OCP Console &rarr; Service Mesh</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="gantt-chart">
+    <div class="gantt-title">Mesh Lifecycle by Network Layer</div>
+    <div class="gantt-grid">
+      <div class="gantt-header">
+        <div class="gantt-label-col"></div>
+        <div class="gantt-bar-col">
+          <span>Install</span>
+          <span>Configure</span>
+          <span>Enroll</span>
+          <span>Traffic flows</span>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L2/L3</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar dim" style="left:0%; width:100%;">
+            <span class="gantt-bar-text">OVN-Kubernetes &mdash; pod networking (exists before the mesh)</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L3/L4 rules</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar yellow" style="left:0%; width:40%;">
+            <span class="gantt-bar-text">istio-cni &mdash; iptables redirect to ztunnel ports</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L4 + mTLS</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar green" style="left:15%; width:85%;">
+            <span class="gantt-bar-text">ztunnel &mdash; TCP proxy, HBONE tunnels, PeerAuthentication</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L5/L6</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar blue" style="left:10%; width:90%;">
+            <span class="gantt-bar-text">mTLS sessions &mdash; SPIFFE identity, certificate exchange</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">L7</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar orange" style="left:40%; width:60%;">
+            <span class="gantt-bar-text">waypoint Envoy &mdash; HTTP routing, AuthzPolicy, timeouts</span>
+          </div>
+        </div>
+      </div>
+      <div class="gantt-row">
+        <div class="gantt-label">Application</div>
+        <div class="gantt-bar-col">
+          <div class="gantt-bar dim" style="left:0%; width:100%;">
+            <span class="gantt-bar-text">runs unchanged throughout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="arch-diagram">
+    <div class="arch-title">Service Mesh 3 &mdash; Ambient Mode Architecture</div>
+    <div class="arch-grid">
+      <!-- Control Plane row -->
+      <div class="arch-row arch-control-plane">
+        <div class="arch-label">Control Plane</div>
+        <div class="arch-box blue">
+          <div class="arch-box-title">istiod</div>
+          <div class="arch-box-detail">Certs, config, xDS</div>
+        </div>
+        <div class="arch-box blue">
+          <div class="arch-box-title">Istio CNI</div>
+          <div class="arch-box-detail">iptables on pod start</div>
+        </div>
+        <div class="arch-box blue">
+          <div class="arch-box-title">Kiali</div>
+          <div class="arch-box-detail">Topology &amp; traces</div>
+        </div>
+      </div>
+
+      <!-- Dashed line separator -->
+      <div class="arch-separator">
+        <span>data plane</span>
+      </div>
+
+      <!-- Data Plane - North/South -->
+      <div class="arch-row arch-data-plane">
+        <div class="arch-label">North/South</div>
+        <div class="arch-flow">
+          <div class="arch-box green">
+            <div class="arch-box-title">Client</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green highlight">
+            <div class="arch-box-title">Gateway</div>
+            <div class="arch-box-detail">Envoy (class: istio)</div>
+            <div class="arch-policy">HTTPRoute<br>GatewayClass</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">L4 mTLS + HBONE</div>
+            <div class="arch-policy">PeerAuth<br>iptables redirect</div>
+          </div>
+          <div class="arch-arrow hbone">=== mTLS ===&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">Dest node</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green highlight">
+            <div class="arch-box-title">Waypoint</div>
+            <div class="arch-box-detail">Envoy L7 (optional)</div>
+            <div class="arch-policy">AuthzPolicy<br>VirtualService</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green">
+            <div class="arch-box-title">Pod</div>
+            <div class="arch-box-detail">plain HTTP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Plane - East/West -->
+      <div class="arch-row arch-data-plane">
+        <div class="arch-label">East/West</div>
+        <div class="arch-flow">
+          <div class="arch-box green">
+            <div class="arch-box-title">Pod A</div>
+            <div class="arch-box-detail">plain HTTP</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">Source node</div>
+            <div class="arch-policy">SPIFFE identity</div>
+          </div>
+          <div class="arch-arrow hbone">=== HBONE mTLS ===&rarr;</div>
+          <div class="arch-box yellow highlight">
+            <div class="arch-box-title">ztunnel</div>
+            <div class="arch-box-detail">Dest node</div>
+            <div class="arch-policy">PeerAuth check</div>
+          </div>
+          <div class="arch-arrow">&rarr;</div>
+          <div class="arch-box green">
+            <div class="arch-box-title">Pod B</div>
+            <div class="arch-box-detail">plain HTTP</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

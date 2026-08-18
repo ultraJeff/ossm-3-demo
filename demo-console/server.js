@@ -802,7 +802,7 @@ fi`);
 app.post('/api/test-cross-namespace', async (req, res) => {
   const result = await run(`echo 'Test: Can a pod in one namespace reach a service in another?'
 echo ''
-echo '  Source: test-client in "httpbin" namespace'
+echo '  Source: test-client in "ossm-httpbin" namespace'
 echo '  Target: web-front-end.ossm-restapi.svc:8080'
 echo ''
 CODE=$(oc exec -n ossm-httpbin deploy/test-client -- curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://web-front-end.ossm-restapi.svc:8080 2>/dev/null)
