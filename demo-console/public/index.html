@@ -46,6 +46,7 @@
         <span><span class="legend-dot" style="background:#bc8cff; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> Gateway</span>
         <span><span class="legend-dot" style="background:#d29922; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> Waypoint</span>
         <span><span class="legend-dot" style="background:#f85149; border-radius:2px; transform:rotate(45deg); display:inline-block;"></span> External Gateway</span>
+        <span><span class="legend-dot" style="background:#30363d; border:2px solid #e6edf3; display:inline-block;"></span> Has HTTPRoute</span>
       </div>
     </div>
   </div>
@@ -330,8 +331,9 @@
     <div class="section-body">
       <div class="talking-point">
         Two layers of zero trust. Layer 1: PeerAuthentication (ztunnel, L4) controls whether
-        non-mesh traffic is allowed at all. Layer 2: AuthorizationPolicy (waypoint, L7) controls
-        which mesh identities can reach which services.
+        non-mesh traffic is allowed at all. Layer 2: AuthorizationPolicy controls which mesh
+        identities can reach which services. L4 policies (identity, namespace, port) are enforced
+        by ztunnel. L7 policies (HTTP methods, paths, JWT) require a waypoint.
       </div>
 
       <details class="layer-section" open>
@@ -364,12 +366,14 @@
       <details class="layer-section" open>
         <summary class="layer-header" style="border-left:3px solid #58a6ff; padding-left:14px; cursor:pointer; list-style:none;">
           <span style="color:#58a6ff; font-weight:700; font-size:16px;">Layer 2: AuthorizationPolicy</span>
-          <span style="color:#8b949e; font-size:12px; margin-left:8px;">waypoint &middot; L7</span>
+          <span style="color:#8b949e; font-size:12px; margin-left:8px;">ztunnel (L4) or waypoint (L7)</span>
         </summary>
         <div style="border-left:3px solid #58a6ff; padding-left:14px; padding-top:10px;">
           <div style="color:#8b949e; font-size:12px; margin-bottom:12px;">
             Controls which SPIFFE identities can reach which services.
-            When a policy is applied, only the listed identities are allowed &mdash; all others are denied.
+            L4 policies (identity, namespace, port) are enforced by ztunnel directly.
+            L7 policies (HTTP methods, paths, JWT) require a waypoint.
+            When a policy is applied, only matching identities are allowed &mdash; all others are denied.
           </div>
 
           <div style="color:#e6edf3; font-weight:700; font-size:14px; margin:16px 0 8px;">Restrict Pod-to-Pod Access</div>
@@ -408,7 +412,86 @@
     </div>
   </div>
 
-  <!-- Section 6: Traffic Management -->
+  <!-- Section 6: RequestAuthentication -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">6</span>
+      <span class="section-title">RequestAuthentication (JWT)</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        RequestAuthentication validates JWT tokens at a gateway or waypoint. The recommended
+        pattern: validate once at the ingress gateway, strip the token, and use SPIFFE identities
+        for internal traffic.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">Client + JWT</div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #bc8cff; border-radius:4px; padding:4px 8px;">
+            <span style="color:#bc8cff;">Gateway</span><br>
+            <span style="color:#8b949e; font-size:10px;">RequestAuthentication</span><br>
+            <span style="color:#8b949e; font-size:10px;">validates &amp; strips JWT</span>
+          </div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;">
+            <span style="color:#3fb950;">Service</span><br>
+            <span style="color:#8b949e; font-size:10px;">SPIFFE identity only</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">Current RequestAuthentication policies</div>
+        <button class="btn" onclick="runAction('/api/request-auth/status', 'out-ra-a')">Show Status</button>
+        <button class="btn" onclick="runAction('/api/request-auth/show', 'out-ra-a')">Show YAML</button>
+      </div>
+      <pre class="output" id="out-ra-a"></pre>
+    </div>
+  </div>
+
+  <!-- Section 7: ServiceEntry -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">7</span>
+      <span class="section-title">ServiceEntry (Egress)</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        ServiceEntry registers external services in the mesh's service registry. This enables
+        observability, policy control, and egress governance for traffic leaving the cluster.
+        Without a ServiceEntry, external traffic bypasses the mesh entirely.
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+          <div style="border:1px solid #3fb950; border-radius:4px; padding:4px 8px;"><span style="color:#3fb950;">Pod</span></div>
+          <span style="color:#3fb950;">=mTLS=&rarr;</span>
+          <div style="border:1px solid #d29922; border-radius:4px; padding:4px 8px;">
+            <span style="color:#d29922;">Waypoint</span><br>
+            <span style="color:#8b949e; font-size:10px;">AuthzPolicy on egress</span>
+          </div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">
+            <span style="color:#8b949e;">ServiceEntry</span><br>
+            <span style="color:#8b949e; font-size:10px;">api.example.com</span>
+          </div>
+          <span style="color:#8b949e;">&rarr;</span>
+          <div style="border:1px solid #8b949e; border-radius:4px; padding:4px 8px;">External API</div>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">Current ServiceEntries</div>
+        <button class="btn" onclick="runAction('/api/service-entry/status', 'out-se-a')">Show Status</button>
+        <button class="btn" onclick="runAction('/api/service-entry/list', 'out-se-a')">List All</button>
+      </div>
+      <pre class="output" id="out-se-a"></pre>
+    </div>
+  </div>
+
+  <!-- Section 8: Traffic Management -->
   <div class="section" data-module="core">
     <div class="section-header" onclick="toggleSection(this)">
       <span class="section-number">6</span>
@@ -453,10 +536,78 @@
     </div>
   </div>
 
-  <!-- Section 7: Observability -->
+  <!-- Section 7: HTTPRoutes -->
   <div class="section" data-module="core">
     <div class="section-header" onclick="toggleSection(this)">
       <span class="section-number">7</span>
+      <span class="section-title">HTTPRoutes</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        HTTPRoutes are the routing rules that tell gateways and waypoints what to do with traffic.
+        Required for gateways (north-south ingress). Optional for waypoints (east-west internal).
+      </div>
+
+      <div style="background:#1c2129; border-radius:6px; padding:14px; margin-bottom:14px; font-size:12px; font-family:'SF Mono','Fira Code',monospace;">
+        <div style="display:flex; gap:16px;">
+          <div style="flex:1; border:1px solid #bc8cff; border-radius:6px; padding:10px;">
+            <div style="color:#bc8cff; font-weight:600; margin-bottom:6px;">North-South (Gateway)</div>
+            <span style="color:#c9d1d9;">parentRef: kind: Gateway</span><br>
+            <span style="color:#8b949e; font-size:11px;">Required. Without it, the gateway returns 404.</span><br>
+            <span style="color:#8b949e; font-size:11px;">Routes external traffic to internal services.</span>
+          </div>
+          <div style="flex:1; border:1px solid #d29922; border-radius:6px; padding:10px;">
+            <div style="color:#d29922; font-weight:600; margin-bottom:6px;">East-West (Waypoint)</div>
+            <span style="color:#c9d1d9;">parentRef: kind: Service</span><br>
+            <span style="color:#8b949e; font-size:11px;">Optional. Traffic flows via Service DNS without it.</span><br>
+            <span style="color:#8b949e; font-size:11px;">Adds timeouts, canary splits, path routing.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">All HTTPRoutes on this cluster</div>
+        <button class="btn" onclick="runAction('/api/httproutes/list', 'out-hr-a')">List All HTTPRoutes</button>
+        <button class="btn" onclick="runAction('/api/httproutes/summary', 'out-hr-a')">Summary</button>
+      </div>
+      <pre class="output" id="out-hr-a"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Inspect individual HTTPRoute</div>
+        <button class="btn" onclick="runAction('/api/httproutes/show?name=bookinfo-http-route&ns=ossm-bookinfo', 'out-hr-b')">bookinfo-http-route</button>
+        <button class="btn" onclick="runAction('/api/httproutes/show?name=service-b-canary&ns=ossm-restapi', 'out-hr-b')">service-b-canary</button>
+        <button class="btn" onclick="runAction('/api/httproutes/show?name=web-front-end-route&ns=ossm-restapi', 'out-hr-b')">web-front-end-route</button>
+        <button class="btn" onclick="runAction('/api/httproutes/show?name=iris-onnx-route&ns=ossm-ai-models', 'out-hr-b')">iris-onnx-route</button>
+      </div>
+      <pre class="output" id="out-hr-b"></pre>
+    </div>
+  </div>
+
+  <!-- Section 8: Scaling -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">8</span>
+      <span class="section-title">Gateway &amp; Waypoint Scaling</span>
+    </div>
+    <div class="section-body">
+      <div class="talking-point">
+        Gateways and waypoints are auto-created Envoy deployments. They default to a single replica.
+        For production, configure an HPA via the Gateway's <code>parametersRef</code> ConfigMap and a
+        PodDisruptionBudget to protect during cluster upgrades.
+      </div>
+
+      <div class="action-group">
+        <div class="action-group-label">Current scaling status</div>
+        <button class="btn" onclick="runAction('/api/scaling/status', 'out-sc-a')">Show Replicas &amp; HPAs</button>
+      </div>
+      <pre class="output" id="out-sc-a"></pre>
+    </div>
+  </div>
+
+  <!-- Section 9: Observability -->
+  <div class="section" data-module="core">
+    <div class="section-header" onclick="toggleSection(this)">
+      <span class="section-number">9</span>
       <span class="section-title">Observability</span>
     </div>
     <div class="section-body">

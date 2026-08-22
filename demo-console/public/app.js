@@ -648,6 +648,14 @@ async function refreshTopology() {
           }
         },
         {
+          selector: 'node.has-httproute',
+          style: {
+            'border-width': 3,
+            'border-color': '#e6edf3',
+            'border-style': 'solid'
+          }
+        },
+        {
           selector: 'edge.idle',
           style: {
             'line-style': 'dashed',
@@ -669,6 +677,33 @@ async function refreshTopology() {
       userPanningEnabled: true,
       boxSelectionEnabled: false
     });
+
+    // Fetch HTTPRoute parents and mark nodes that have routes attached
+    try {
+      var hrRes = await fetch('/api/httproutes/parents');
+      var hrData = await hrRes.json();
+      if (hrData.parents) {
+        topoInstance.nodes().forEach(function(node) {
+          var wl = node.data('workload') || '';
+          var ns = node.data('namespace') || '';
+          // Gateway nodes: workload is <gateway-name>-istio, HTTPRoute parent is Gateway/<gateway-name>
+          var gwName = wl.replace(/-istio$/, '');
+          var gwKey = 'Gateway/' + gwName + '@' + ns;
+          // Also check cross-namespace: HTTPRoute in app namespace targeting gateway in istio-ingress
+          var gwKeyIngress = 'Gateway/' + gwName + '@istio-ingress';
+          // Service nodes: check Service/<name>
+          var svcName = node.data('service') || node.data('app') || '';
+          var svcKey = 'Service/' + svcName + '@' + ns;
+          // Check all HTTPRoute namespaces for this parent
+          var hasRoute = Object.keys(hrData.parents).some(function(k) {
+            return k.indexOf('Gateway/' + gwName) === 0 || k.indexOf('Service/' + svcName) === 0;
+          });
+          if (hasRoute && (wl || svcName)) {
+            node.addClass('has-httproute');
+          }
+        });
+      }
+    } catch (e) { /* ignore */ }
 
     var nodeCount = elements.nodes.filter(function(n) { return !n.classes || n.classes.indexOf('ns-group') === -1; }).length;
     var edgeCount = elements.edges.length;

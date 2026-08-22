@@ -1012,6 +1012,145 @@ echo 'and connections to the logger will start failing again.'`);
   res.json(result);
 });
 
+// --- RequestAuthentication ---
+
+app.get('/api/request-auth/status', async (req, res) => {
+  const result = await run('oc get requestauthentication -A --no-headers 2>/dev/null');
+  if (!result.output.trim()) {
+    res.json({ output: 'No RequestAuthentication policies configured.\n\nRequestAuthentication validates JWT tokens at a gateway or waypoint.\nUse it at the ingress gateway to authenticate external clients,\nthen rely on SPIFFE identities for internal traffic.', exitCode: 0 });
+    return;
+  }
+  res.json(result);
+});
+
+app.get('/api/request-auth/show', async (req, res) => {
+  var ns = req.query.ns;
+  if (!ns) {
+    const list = await run("oc get requestauthentication -A -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{\"\\n\"}{end}' 2>/dev/null");
+    if (!list.output.trim()) {
+      res.json({ output: 'No RequestAuthentication policies found', exitCode: 1 });
+      return;
+    }
+    var first = list.output.replace(/'/g, '').trim().split('\n')[0].split('/');
+    ns = first[0];
+    var name = first[1];
+    var result = await runCleanYaml('oc get requestauthentication ' + name + ' -n ' + ns + ' -o yaml 2>/dev/null');
+    res.json(result);
+    return;
+  }
+  var result = await run('oc get requestauthentication -n ' + ns + ' -o yaml 2>/dev/null');
+  res.json(result);
+});
+
+// --- ServiceEntry ---
+
+app.get('/api/service-entry/status', async (req, res) => {
+  const result = await run('oc get serviceentry -A --no-headers 2>/dev/null');
+  if (!result.output.trim()) {
+    res.json({ output: 'No ServiceEntries configured.\n\nServiceEntry registers external services in the mesh registry.\nThis enables observability, policy control, and egress governance\nfor traffic leaving the cluster.', exitCode: 0 });
+    return;
+  }
+  res.json(result);
+});
+
+app.get('/api/service-entry/list', async (req, res) => {
+  const result = await run(`oc get serviceentry -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,HOSTS:.spec.hosts[*],LOCATION:.spec.location,RESOLUTION:.spec.resolution' --no-headers 2>/dev/null`);
+  if (!result.output.trim()) {
+    res.json({ output: 'No ServiceEntries found', exitCode: 0 });
+    return;
+  }
+  res.json(result);
+});
+
+// --- Scaling ---
+
+app.get('/api/scaling/status', async (req, res) => {
+  const result = await run(`echo '=== Gateway Deployments ==='
+oc get deploy -n istio-ingress -o custom-columns='NAME:.metadata.name,READY:.status.readyReplicas,REPLICAS:.spec.replicas' --no-headers 2>/dev/null | grep -v '^$'
+echo ''
+echo '=== Waypoint Deployments ==='
+for NS in ossm-bookinfo ossm-restapi ossm-httpbin ${MODELS_NS}; do
+  oc get deploy -n $NS --no-headers 2>/dev/null | grep waypoint | awk -v ns=$NS '{printf "  %-40s %s (ns: %s)\\n", $1, $2, ns}'
+done
+echo ''
+echo '=== HPAs ==='
+oc get hpa -n istio-ingress --no-headers 2>/dev/null | awk '{printf "  %-40s min=%s max=%s cpu=%s\\n", $1, $4, $5, $3}' 2>/dev/null
+for NS in ossm-bookinfo ossm-restapi ossm-httpbin ${MODELS_NS}; do
+  oc get hpa -n $NS --no-headers 2>/dev/null | awk -v ns=$NS '{printf "  %-40s min=%s max=%s cpu=%s (ns: %s)\\n", $1, $4, $5, $3, ns}'
+done
+TOTAL_HPA=$(oc get hpa -n istio-ingress --no-headers 2>/dev/null | wc -l | tr -d ' ')
+if [ "$TOTAL_HPA" = "0" ]; then
+  echo '  (none configured — gateways are single-replica)'
+fi`);
+  res.json(result);
+});
+
+// --- HTTPRoutes ---
+
+app.get('/api/httproutes/list', async (req, res) => {
+  const result = await run(`echo '=== North-South (attached to Gateways — external ingress) ==='
+echo 'These are required. Without them, the gateway returns 404.'
+echo ''
+oc get httproute -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,GATEWAY:.spec.parentRefs[0].name,HOSTNAMES:.spec.hostnames[*],BACKEND:.spec.rules[0].backendRefs[0].name' --no-headers 2>/dev/null | while read NS NAME PARENT HOSTS BACKEND; do
+  KIND=$(oc get httproute $NAME -n $NS -o jsonpath='{.spec.parentRefs[0].kind}' 2>/dev/null)
+  if [ "$KIND" = "Gateway" ]; then
+    printf "  %-20s %-40s -> %-30s %s\\n" "$NS" "$NAME" "$BACKEND" "$HOSTS"
+  fi
+done
+echo ''
+echo '=== East-West (attached to Services — internal traffic management) ==='
+echo 'These are optional. Traffic flows via Service DNS without them.'
+echo 'They add L7 behavior: timeouts, canary splits, path routing.'
+echo ''
+oc get httproute -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,SERVICE:.spec.parentRefs[0].name,BACKEND:.spec.rules[0].backendRefs[0].name' --no-headers 2>/dev/null | while read NS NAME PARENT BACKEND; do
+  KIND=$(oc get httproute $NAME -n $NS -o jsonpath='{.spec.parentRefs[0].kind}' 2>/dev/null)
+  if [ "$KIND" = "Service" ]; then
+    printf "  %-20s %-40s -> %-30s\\n" "$NS" "$NAME" "$BACKEND"
+  fi
+done`);
+  res.json(result);
+});
+
+app.get('/api/httproutes/show', async (req, res) => {
+  var name = req.query.name;
+  var ns = req.query.ns;
+  if (!name || !ns) {
+    res.json({ output: 'Specify ?name=<name>&ns=<namespace>', exitCode: 1 });
+    return;
+  }
+  var result = await runCleanYaml(`oc get httproute ${name} -n ${ns} -o yaml 2>/dev/null`);
+  if (!result.output.trim()) result = { output: 'HTTPRoute not found', exitCode: 1 };
+  res.json(result);
+});
+
+app.get('/api/httproutes/summary', async (req, res) => {
+  const gateways = await run("oc get httproute -A -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name} {.spec.parentRefs[0].kind} {.spec.parentRefs[0].name}{\"\\n\"}{end}' 2>/dev/null");
+  var gwCount = 0, svcCount = 0;
+  gateways.output.split('\n').forEach(function(line) {
+    if (line.includes('Gateway')) gwCount++;
+    if (line.includes('Service')) svcCount++;
+  });
+  res.json({
+    output: gwCount + ' attached to Gateways (north-south)\n' + svcCount + ' attached to Services (east-west)',
+    gatewayCount: gwCount,
+    serviceCount: svcCount
+  });
+});
+
+app.get('/api/httproutes/parents', async (req, res) => {
+  const result = await run("oc get httproute -A -o jsonpath='{range .items[*]}{.spec.parentRefs[0].kind}/{.spec.parentRefs[0].name}@{.metadata.namespace}{\"\\n\"}{end}' 2>/dev/null");
+  var parents = {};
+  result.output.replace(/'/g, '').trim().split('\n').forEach(function(line) {
+    if (!line.trim()) return;
+    var parts = line.split('@');
+    var ref = parts[0];
+    var ns = parts[1];
+    var key = ref + '@' + ns;
+    parents[key] = (parents[key] || 0) + 1;
+  });
+  res.json({ parents: parents });
+});
+
 // --- Observability ---
 
 app.post('/api/generate-traffic', async (req, res) => {

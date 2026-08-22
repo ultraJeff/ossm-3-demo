@@ -196,7 +196,7 @@ Scope: can be set per-namespace, per-workload, or per-port.
 > Speaker notes: "STRICT doesn't mean 'encrypt everything' — ztunnel does that automatically for enrolled pods. STRICT means 'reject connections from pods that CAN'T encrypt' — pods outside the mesh. It's the difference between 'I encrypt my side' and 'I refuse to talk to anyone who doesn't.'"
 
 ### Slide 13: AuthorizationPolicy
-AuthorizationPolicy controls which SPIFFE identities can reach which services. This is L7 policy, enforced by the waypoint proxy.
+AuthorizationPolicy controls which SPIFFE identities can reach which services. L4 policies (identity, namespace, port) are enforced by ztunnel directly. L7 policies (HTTP methods, paths, JWT claims) require a waypoint proxy.
 
 ```yaml
 apiVersion: security.istio.io/v1
@@ -219,7 +219,7 @@ spec:
 
 What this says: "Only the `web` service account in the `frontend` namespace can reach services through this waypoint. Everyone else gets 403."
 
-> Speaker notes: "Two layers of zero trust. PeerAuthentication (ztunnel, L4) controls whether plaintext is allowed at all. AuthorizationPolicy (waypoint, L7) controls which specific identities can access which specific services. You can restrict by namespace, service account, HTTP method, path — anything the waypoint can inspect."
+> Speaker notes: "Two layers of zero trust. PeerAuthentication (ztunnel, L4) controls whether plaintext is allowed at all. AuthorizationPolicy controls which specific identities can access which specific services. L4 policies — identity, namespace, port — are enforced by ztunnel directly without a waypoint. L7 policies — HTTP method, path, JWT claims — require a waypoint to inspect the traffic."
 
 ### Slide 14: Waypoint Proxies
 A waypoint proxy is an Envoy instance deployed per-namespace for L7 policy enforcement.
@@ -242,8 +242,8 @@ spec:
 
 - Created using the Gateway API `Gateway` resource with class `istio-waypoint`
 - ztunnel routes traffic through the waypoint when the namespace has `istio.io/use-waypoint` label
-- Handles: AuthorizationPolicy, HTTPRoute timeouts, traffic splitting, retries
-- Without a waypoint, ztunnel handles L4 only — mTLS encryption and basic L4 auth
+- Handles: L7 AuthorizationPolicy (HTTP methods, paths, JWT), HTTPRoute timeouts, traffic splitting
+- Without a waypoint, ztunnel handles L4 — mTLS encryption, L4 AuthorizationPolicy (identity, namespace, port)
 
 > Speaker notes: "You don't always need a waypoint. If all you need is encryption and basic connectivity, ztunnel handles that at L4. You add a waypoint when you need L7 features — HTTP-aware authorization policies, timeouts, canary routing."
 
