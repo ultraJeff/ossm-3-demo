@@ -1062,6 +1062,59 @@ app.get('/api/service-entry/list', async (req, res) => {
   res.json(result);
 });
 
+app.post('/api/service-entry/test-external', async (req, res) => {
+  const result = await run(`echo 'Calling httpbin.org from test-client in ossm-httpbin...'
+echo ''
+RESULT=$(oc exec -n ossm-httpbin deploy/test-client -- curl -s --connect-timeout 5 https://httpbin.org/get 2>/dev/null)
+if [ -n "$RESULT" ]; then
+  echo "$RESULT" | jq '{url, origin, headers: {Host: .headers.Host}}' 2>/dev/null || echo "$RESULT"
+  echo ''
+  HAS_SE=$(oc get serviceentry httpbin-org -n ossm-httpbin --no-headers 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$HAS_SE" = "0" ]; then
+    echo 'This request succeeded but is invisible to the mesh.'
+    echo 'The traffic bypasses ztunnel for external destinations.'
+    echo 'Apply a ServiceEntry to bring it under mesh observability and policy.'
+  else
+    echo 'ServiceEntry is active. This traffic is now visible to the mesh'
+    echo 'and subject to AuthorizationPolicy.'
+  fi
+else
+  echo 'Could not reach httpbin.org. Check network connectivity.'
+fi`);
+  res.json(result);
+});
+
+app.post('/api/service-entry/apply', async (req, res) => {
+  const result = await run(`oc apply -f - <<'EOF' 2>&1
+apiVersion: networking.istio.io/v1
+kind: ServiceEntry
+metadata:
+  name: httpbin-org
+  namespace: ossm-httpbin
+spec:
+  hosts:
+    - httpbin.org
+  location: MESH_EXTERNAL
+  ports:
+    - number: 443
+      name: https
+      protocol: TLS
+    - number: 80
+      name: http
+      protocol: HTTP
+  resolution: DNS
+EOF
+echo ''
+echo 'ServiceEntry applied. httpbin.org is now registered in the mesh.'
+echo 'Traffic to httpbin.org will appear in Kiali and can be governed by AuthorizationPolicy.'`);
+  res.json(result);
+});
+
+app.post('/api/service-entry/delete', async (req, res) => {
+  const result = await run('oc delete serviceentry httpbin-org -n ossm-httpbin 2>&1');
+  res.json(result);
+});
+
 // --- Scaling ---
 
 app.get('/api/scaling/status', async (req, res) => {
@@ -1144,6 +1197,65 @@ app.get('/api/httproutes/summary', async (req, res) => {
     gatewayCount: gwCount,
     serviceCount: svcCount
   });
+});
+
+app.post('/api/httproutes/demo-delete', async (req, res) => {
+  const result = await run(`echo 'Deleting bookinfo-http-route...'
+oc delete httproute bookinfo-http-route -n ossm-bookinfo 2>&1
+echo ''
+echo 'HTTPRoute deleted. The bookinfo-gateway no longer knows where to send traffic.'
+echo 'Try curling the gateway — it should return 404.'`);
+  res.json(result);
+});
+
+app.post('/api/httproutes/demo-test-gateway', async (req, res) => {
+  const result = await run(`GATEWAY=$(oc get gateway bookinfo-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+if [ -z "$GATEWAY" ]; then
+  echo 'Bookinfo gateway has no address.'
+  exit 1
+fi
+echo "$ curl http://$GATEWAY/productpage"
+echo ''
+CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 "http://$GATEWAY/productpage" 2>/dev/null)
+echo "HTTP $CODE"
+echo ''
+if [ "$CODE" = "200" ]; then
+  echo 'HTTPRoute is active — the gateway routed traffic to productpage.'
+elif [ "$CODE" = "404" ]; then
+  echo 'No HTTPRoute — the gateway has no routing rules and returns 404.'
+  echo 'Recreate the HTTPRoute to restore access.'
+else
+  echo "Unexpected response."
+fi`);
+  res.json(result);
+});
+
+app.post('/api/httproutes/demo-recreate', async (req, res) => {
+  const result = await run(`echo 'Recreating bookinfo-http-route...'
+oc apply -f - <<'EOF' 2>&1
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bookinfo-http-route
+  namespace: ossm-bookinfo
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: bookinfo-gateway
+      namespace: istio-ingress
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: productpage
+          port: 9080
+EOF
+echo ''
+echo 'HTTPRoute recreated. The gateway can route traffic again.'`);
+  res.json(result);
 });
 
 app.get('/api/httproutes/parents', async (req, res) => {

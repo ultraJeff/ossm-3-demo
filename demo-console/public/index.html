@@ -488,6 +488,19 @@
         <button class="btn" onclick="runAction('/api/service-entry/list', 'out-se-a')">List All</button>
       </div>
       <pre class="output" id="out-se-a"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Register httpbin.org in the mesh</div>
+        <button class="btn success" onclick="runAction('/api/service-entry/apply', 'out-se-b', 'POST')">Apply ServiceEntry</button>
+        <button class="btn danger" onclick="runAction('/api/service-entry/delete', 'out-se-b', 'POST')">Delete ServiceEntry</button>
+      </div>
+      <pre class="output" id="out-se-b"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Test: call httpbin.org from inside the mesh</div>
+        <button class="btn" onclick="runAction('/api/service-entry/test-external', 'out-se-c', 'POST')">Call httpbin.org</button>
+      </div>
+      <pre class="output" id="out-se-c"></pre>
     </div>
   </div>
 
@@ -580,6 +593,15 @@
         <button class="btn" onclick="runAction('/api/httproutes/show?name=iris-onnx-route&ns=ossm-ai-models', 'out-hr-b')">iris-onnx-route</button>
       </div>
       <pre class="output" id="out-hr-b"></pre>
+
+      <div style="color:#e6edf3; font-weight:700; font-size:14px; margin:20px 0 8px;">What Happens Without an HTTPRoute?</div>
+      <div style="color:#8b949e; font-size:12px; margin-bottom:8px;">Delete the bookinfo HTTPRoute, test the gateway (404), then recreate it.</div>
+      <div class="action-group">
+        <button class="btn danger" onclick="runAction('/api/httproutes/demo-delete', 'out-hr-c', 'POST')">Delete bookinfo-http-route</button>
+        <button class="btn" onclick="runAction('/api/httproutes/demo-test-gateway', 'out-hr-c', 'POST')">Test Gateway</button>
+        <button class="btn success" onclick="runAction('/api/httproutes/demo-recreate', 'out-hr-c', 'POST')">Recreate HTTPRoute</button>
+      </div>
+      <pre class="output" id="out-hr-c"></pre>
     </div>
   </div>
 
