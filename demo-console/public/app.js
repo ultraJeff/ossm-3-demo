@@ -678,27 +678,31 @@ async function refreshTopology() {
       boxSelectionEnabled: false
     });
 
-    // Fetch HTTPRoute parents and mark nodes that have routes attached
+    // Fetch HTTPRoute parents and mark gateway/waypoint nodes that have routes attached
     try {
       var hrRes = await fetch('/api/httproutes/parents');
       var hrData = await hrRes.json();
       if (hrData.parents) {
+        // Build a set of parent names (just the resource name, not kind/ns)
+        var gwParents = {};
+        var svcParents = {};
+        Object.keys(hrData.parents).forEach(function(k) {
+          var parts = k.split('@')[0].split('/');
+          var kind = parts[0];
+          var name = parts[1];
+          if (kind === 'Gateway') gwParents[name] = true;
+          if (kind === 'Service') svcParents[name] = true;
+        });
+
         topoInstance.nodes().forEach(function(node) {
           var wl = node.data('workload') || '';
-          var ns = node.data('namespace') || '';
-          // Gateway nodes: workload is <gateway-name>-istio, HTTPRoute parent is Gateway/<gateway-name>
+          // Only match gateway/waypoint workloads (diamonds), not regular workloads or services
+          if (!wl) return;
+          var isGwOrWp = wl.indexOf('-gateway-') !== -1 || wl.indexOf('waypoint') !== -1;
+          if (!isGwOrWp) return;
+          // Gateway workload name is <gateway-name>-istio
           var gwName = wl.replace(/-istio$/, '');
-          var gwKey = 'Gateway/' + gwName + '@' + ns;
-          // Also check cross-namespace: HTTPRoute in app namespace targeting gateway in istio-ingress
-          var gwKeyIngress = 'Gateway/' + gwName + '@istio-ingress';
-          // Service nodes: check Service/<name>
-          var svcName = node.data('service') || node.data('app') || '';
-          var svcKey = 'Service/' + svcName + '@' + ns;
-          // Check all HTTPRoute namespaces for this parent
-          var hasRoute = Object.keys(hrData.parents).some(function(k) {
-            return k.indexOf('Gateway/' + gwName) === 0 || k.indexOf('Service/' + svcName) === 0;
-          });
-          if (hasRoute && (wl || svcName)) {
+          if (gwParents[gwName]) {
             node.addClass('has-httproute');
           }
         });
