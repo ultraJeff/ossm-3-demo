@@ -1,0 +1,9 @@
+[allowlist]
+  description = "Allow Istio's public test JWT token used in demo console"
+  paths = [
+    '''demo-console/server\.js''',
+  ]
+  regexTarget = "line"
+  regexes = [
+    '''testing@secure\.istio\.io''',
+  ]

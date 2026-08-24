@@ -1015,30 +1015,112 @@ echo 'and connections to the logger will start failing again.'`);
 // --- RequestAuthentication ---
 
 app.get('/api/request-auth/status', async (req, res) => {
-  const result = await run('oc get requestauthentication -A --no-headers 2>/dev/null');
-  if (!result.output.trim()) {
-    res.json({ output: 'No RequestAuthentication policies configured.\n\nRequestAuthentication validates JWT tokens at a gateway or waypoint.\nUse it at the ingress gateway to authenticate external clients,\nthen rely on SPIFFE identities for internal traffic.', exitCode: 0 });
-    return;
+  const ra = await run('oc get requestauthentication -A --no-headers 2>/dev/null');
+  const ap = await run('oc get authorizationpolicy -n istio-ingress --no-headers 2>/dev/null | grep jwt');
+  var output = '';
+  if (ra.output.trim()) {
+    output += '=== RequestAuthentication ===\n' + ra.output + '\n';
+  } else {
+    output += 'No RequestAuthentication policies configured.\n\n';
   }
+  if (ap.output.trim()) {
+    output += '=== JWT AuthorizationPolicy ===\n' + ap.output;
+  }
+  res.json({ output, exitCode: 0 });
+});
+
+app.post('/api/request-auth/apply', async (req, res) => {
+  const result = await run(`echo 'Applying RequestAuthentication + AuthorizationPolicy to restapi-gateway...'
+echo ''
+oc apply -f - <<'EOF' 2>&1
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: demo-jwt-auth
+  namespace: istio-ingress
+spec:
+  targetRefs:
+    - kind: Gateway
+      group: gateway.networking.k8s.io
+      name: restapi-gateway
+  jwtRules:
+    - issuer: "testing@secure.istio.io"
+      jwksUri: "https://raw.githubusercontent.com/istio/istio/release-1.24/security/tools/jwt/samples/jwks.json"
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: demo-jwt-require
+  namespace: istio-ingress
+spec:
+  targetRefs:
+    - kind: Gateway
+      group: gateway.networking.k8s.io
+      name: restapi-gateway
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            requestPrincipals: ["*"]
+EOF
+echo ''
+echo 'Applied. The restapi-gateway now requires a valid JWT.'
+echo 'Requests without a token will be denied.'`);
   res.json(result);
 });
 
-app.get('/api/request-auth/show', async (req, res) => {
-  var ns = req.query.ns;
-  if (!ns) {
-    const list = await run("oc get requestauthentication -A -o jsonpath='{range .items[*]}{.metadata.namespace}/{.metadata.name}{\"\\n\"}{end}' 2>/dev/null");
-    if (!list.output.trim()) {
-      res.json({ output: 'No RequestAuthentication policies found', exitCode: 1 });
-      return;
-    }
-    var first = list.output.replace(/'/g, '').trim().split('\n')[0].split('/');
-    ns = first[0];
-    var name = first[1];
-    var result = await runCleanYaml('oc get requestauthentication ' + name + ' -n ' + ns + ' -o yaml 2>/dev/null');
-    res.json(result);
-    return;
-  }
-  var result = await run('oc get requestauthentication -n ' + ns + ' -o yaml 2>/dev/null');
+app.post('/api/request-auth/test-no-token', async (req, res) => {
+  const result = await run(`GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+if [ -z "$GATEWAY" ]; then
+  echo 'restapi-gateway has no address.'
+  exit 1
+fi
+echo '$ curl http://$GATEWAY/hello (no token)'
+echo ''
+CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 "http://$GATEWAY/hello" 2>/dev/null)
+echo "HTTP $CODE"
+echo ''
+if [ "$CODE" = "403" ]; then
+  echo 'Denied. The gateway requires a valid JWT but none was provided.'
+elif [ "$CODE" = "200" ]; then
+  echo 'Allowed. No RequestAuthentication is active — requests pass without a token.'
+else
+  echo "Unexpected response."
+fi`);
+  res.json(result);
+});
+
+app.post('/api/request-auth/test-with-token', async (req, res) => {
+  const result = await run(`GATEWAY=$(oc get gateway restapi-gateway -n istio-ingress -o jsonpath='{.status.addresses[0].value}' 2>/dev/null)
+if [ -z "$GATEWAY" ]; then
+  echo 'restapi-gateway has no address.'
+  exit 1
+fi
+# Istio's test JWT token (issuer: testing@secure.istio.io)
+TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6IkRIRmJwb0lVcXJZOHQyenBBMnFYZkNtcjVWTzVaRXI0UnpIVV8tZW52dlEiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjQ2ODU5ODk3MDAsImlhdCI6MTUzMjM4OTcwMCwiaXNzIjoidGVzdGluZ0BzZWN1cmUuaXN0aW8uaW8iLCJzdWIiOiJ0ZXN0aW5nQHNlY3VyZS5pc3Rpby5pbyJ9.CfNnDjMBWtYs3fhKPT1RSZhBwsvHzNaRFGtd0LH_5Ig6ECkGXj2YoU8Bpo1UcPVUBDiGJMwyYYMGm7KT7nBHQ-K2rBng0Av-v0EoeemRW_KhZ8BFQX5Yh0DE6L1h4KP0J1Hhqkk3Gj3jlINf4mJB3XSaGdQaI2FrQLYqRCUzXS_R05-AwC43AbGjWJB-nSEh57E-MC_37XPix0cUr12RXVNPmVOtlQQfFzJL45Best1HwrplI0J-ZFKR3EvH7ZPQajg2EPFSALJgXOQf7KaHEjSdrb6G5St3SA9d3M-y9LDzKqOdNC4iMrBYS0bfXMBPOAx7e5OkkhsFtCvnTCkGE0w"
+echo '$ curl -H "Authorization: Bearer <istio-test-jwt>" http://$GATEWAY/hello'
+echo ''
+CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 -H "Authorization: Bearer $TOKEN" "http://$GATEWAY/hello" 2>/dev/null)
+echo "HTTP $CODE"
+echo ''
+if [ "$CODE" = "200" ]; then
+  echo 'Allowed. The JWT was validated by RequestAuthentication.'
+  echo 'Issuer: testing@secure.istio.io'
+elif [ "$CODE" = "401" ]; then
+  echo 'Unauthorized. The token may be expired or the JWKS could not be fetched.'
+elif [ "$CODE" = "403" ]; then
+  echo 'Forbidden. Token validated but AuthorizationPolicy denied the request.'
+else
+  echo "Unexpected response."
+fi`);
+  res.json(result);
+});
+
+app.post('/api/request-auth/delete', async (req, res) => {
+  const result = await run(`oc delete requestauthentication demo-jwt-auth -n istio-ingress 2>&1
+oc delete authorizationpolicy demo-jwt-require -n istio-ingress 2>&1
+echo ''
+echo 'JWT validation removed. The restapi-gateway accepts all requests again.'`);
   res.json(result);
 });
 

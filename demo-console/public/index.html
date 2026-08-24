@@ -443,11 +443,24 @@
       </div>
 
       <div class="action-group">
-        <div class="action-group-label">Current RequestAuthentication policies</div>
+        <div class="action-group-label">Current status</div>
         <button class="btn" onclick="runAction('/api/request-auth/status', 'out-ra-a')">Show Status</button>
-        <button class="btn" onclick="runAction('/api/request-auth/show', 'out-ra-a')">Show YAML</button>
       </div>
       <pre class="output" id="out-ra-a"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Apply JWT validation to restapi-gateway</div>
+        <button class="btn success" onclick="runAction('/api/request-auth/apply', 'out-ra-b', 'POST')">Apply JWT Auth</button>
+        <button class="btn danger" onclick="runAction('/api/request-auth/delete', 'out-ra-b', 'POST')">Remove JWT Auth</button>
+      </div>
+      <pre class="output" id="out-ra-b"></pre>
+
+      <div class="action-group">
+        <div class="action-group-label">Test access to restapi-gateway</div>
+        <button class="btn" onclick="runAction('/api/request-auth/test-no-token', 'out-ra-c', 'POST')">Test Without Token</button>
+        <button class="btn" onclick="runAction('/api/request-auth/test-with-token', 'out-ra-c', 'POST')">Test With Token</button>
+      </div>
+      <pre class="output" id="out-ra-c"></pre>
     </div>
   </div>
 
