@@ -678,31 +678,23 @@ async function refreshTopology() {
       boxSelectionEnabled: false
     });
 
-    // Fetch HTTPRoute parents and mark gateway/waypoint nodes that have routes attached
+    // Fetch HTTPRoute parents and mark Service nodes that have east-west HTTPRoutes attached
     try {
       var hrRes = await fetch('/api/httproutes/parents');
       var hrData = await hrRes.json();
       if (hrData.parents) {
-        // Build a set of parent names (just the resource name, not kind/ns)
-        var gwParents = {};
         var svcParents = {};
         Object.keys(hrData.parents).forEach(function(k) {
           var parts = k.split('@')[0].split('/');
-          var kind = parts[0];
-          var name = parts[1];
-          if (kind === 'Gateway') gwParents[name] = true;
-          if (kind === 'Service') svcParents[name] = true;
+          if (parts[0] === 'Service') svcParents[parts[1]] = true;
         });
 
         topoInstance.nodes().forEach(function(node) {
-          var wl = node.data('workload') || '';
-          // Only match gateway/waypoint workloads (diamonds), not regular workloads or services
-          if (!wl) return;
-          var isGwOrWp = wl.indexOf('-gateway-') !== -1 || wl.indexOf('waypoint') !== -1;
-          if (!isGwOrWp) return;
-          // Gateway workload name is <gateway-name>-istio
-          var gwName = wl.replace(/-istio$/, '');
-          if (gwParents[gwName]) {
+          var nodeType = node.data('nodeType') || '';
+          var svcName = node.data('service') || '';
+          var app = node.data('app') || '';
+          // Match service nodes or workloads whose app matches a Service parentRef
+          if (svcParents[svcName] || svcParents[app]) {
             node.addClass('has-httproute');
           }
         });

@@ -1088,24 +1088,33 @@ fi`);
 // --- HTTPRoutes ---
 
 app.get('/api/httproutes/list', async (req, res) => {
-  const result = await run(`echo '=== North-South (attached to Gateways — external ingress) ==='
-echo 'These are required. Without them, the gateway returns 404.'
+  const result = await run(`echo '=== North-South (attached to Gateways) ==='
+echo 'Required — without an HTTPRoute, the gateway returns 404.'
 echo ''
-oc get httproute -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,GATEWAY:.spec.parentRefs[0].name,HOSTNAMES:.spec.hostnames[*],BACKEND:.spec.rules[0].backendRefs[0].name' --no-headers 2>/dev/null | while read NS NAME PARENT HOSTS BACKEND; do
+printf '  %-20s %-42s %-20s %s\\n' 'NAMESPACE' 'HTTPROUTE' 'GATEWAY' 'HOSTNAME'
+printf '  %-20s %-42s %-20s %s\\n' '---------' '---------' '-------' '--------'
+oc get httproute -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,PARENT:.spec.parentRefs[0].name,HOSTNAMES:.spec.hostnames[*]' --no-headers 2>/dev/null | while read NS NAME PARENT HOSTS; do
   KIND=$(oc get httproute $NAME -n $NS -o jsonpath='{.spec.parentRefs[0].kind}' 2>/dev/null)
   if [ "$KIND" = "Gateway" ]; then
-    printf "  %-20s %-40s -> %-30s %s\\n" "$NS" "$NAME" "$BACKEND" "$HOSTS"
+    HOSTS_CLEAN=$(echo "$HOSTS" | sed 's/<none>//')
+    printf "  %-20s %-42s %-20s %s\\n" "$NS" "$NAME" "$PARENT" "$HOSTS_CLEAN"
   fi
 done
 echo ''
-echo '=== East-West (attached to Services — internal traffic management) ==='
-echo 'These are optional. Traffic flows via Service DNS without them.'
-echo 'They add L7 behavior: timeouts, canary splits, path routing.'
+echo '=== East-West (attached to Services via Waypoint) ==='
+echo 'Optional — adds L7 behavior like timeouts and canary splits.'
 echo ''
-oc get httproute -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,SERVICE:.spec.parentRefs[0].name,BACKEND:.spec.rules[0].backendRefs[0].name' --no-headers 2>/dev/null | while read NS NAME PARENT BACKEND; do
+printf '  %-20s %-42s %-20s %s\\n' 'NAMESPACE' 'HTTPROUTE' 'SERVICE' 'BEHAVIOR'
+printf '  %-20s %-42s %-20s %s\\n' '---------' '---------' '-------' '--------'
+oc get httproute -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,PARENT:.spec.parentRefs[0].name' --no-headers 2>/dev/null | while read NS NAME PARENT; do
   KIND=$(oc get httproute $NAME -n $NS -o jsonpath='{.spec.parentRefs[0].kind}' 2>/dev/null)
   if [ "$KIND" = "Service" ]; then
-    printf "  %-20s %-40s -> %-30s\\n" "$NS" "$NAME" "$BACKEND"
+    TIMEOUT=$(oc get httproute $NAME -n $NS -o jsonpath='{.spec.rules[0].timeouts.request}' 2>/dev/null)
+    WEIGHTS=$(oc get httproute $NAME -n $NS -o jsonpath='{.spec.rules[0].backendRefs[*].weight}' 2>/dev/null | tr -s ' ')
+    BEHAVIOR=""
+    if [ -n "$TIMEOUT" ]; then BEHAVIOR="timeout: $TIMEOUT"; fi
+    if [ -n "$WEIGHTS" ]; then BEHAVIOR="weights: $WEIGHTS"; fi
+    printf "  %-20s %-42s %-20s %s\\n" "$NS" "$NAME" "$PARENT" "$BEHAVIOR"
   fi
 done`);
   res.json(result);
