@@ -6,6 +6,7 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true,Replace=true
 spec:
   namespace: istio-system
+  version: v1.31.1
   profile: ambient
   values:
     pilot:
