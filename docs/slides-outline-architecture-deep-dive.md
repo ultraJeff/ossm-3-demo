@@ -1,6 +1,8 @@
-# OpenShift Service Mesh 3: Ambient Mode — Slide Outline (v2)
+# OpenShift Service Mesh 3: Ambient Mode Architecture — Technical Deep Dive (Slide Outline)
 
-Target audience: OpenShift users who can deploy apps but have mixed knowledge of networking, security, and observability. Conference setting. No assumptions about Istio, SPIFFE, Gateway API, or networking internals.
+Target audience: platform engineers, and developers who are comfortable with Kubernetes networking. Assumes interest in how the data plane actually works — this outline covers ztunnel, HBONE, SPIFFE, iptables interception, the OVN-Kubernetes seam (`routingViaHost`), waypoint proxies, and the Istio API surface.
+
+Not an introductory talk. Delivered once to a general developer audience and ran too deep for the room. For a high-level introduction aimed at developers new to service mesh, see `slides-outline-developer-intro.md`.
 
 ---
 
