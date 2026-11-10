@@ -1,31 +1,47 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-console
+  name: demo-console-v2
   namespace: ossm-demo-console
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: demo-console
+      app: demo-console-v2
   template:
     metadata:
       labels:
-        app: demo-console
+        app: demo-console-v2
     spec:
       serviceAccountName: demo-console
       containers:
         - name: console
-          image: image-registry.openshift-image-registry.svc:5000/ossm-demo-console/demo-console:latest
+          image: image-registry.openshift-image-registry.svc:5000/ossm-demo-console/demo-console:v2
           ports:
             - containerPort: 3000
+          # /healthz answers from inside the process only. Don't point probes at
+          # /api/health: it shells out to oc several times and would turn a slow
+          # API server into a restart loop.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
           resources:
             requests:
               cpu: 100m
-              memory: 128Mi
+              memory: 192Mi
             limits:
-              cpu: 500m
-              memory: 256Mi
+              cpu: "1"
+              memory: 512Mi
 ---
 apiVersion: v1
 kind: Service
@@ -34,7 +50,7 @@ metadata:
   namespace: ossm-demo-console
 spec:
   selector:
-    app: demo-console
+    app: demo-console-v2
   ports:
     - port: 3000
       targetPort: 3000

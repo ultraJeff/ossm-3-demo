@@ -720,14 +720,26 @@ window.addEventListener('DOMContentLoaded', function() {
   refreshTopology();
 });
 
-setInterval(refreshStatus, 5000);
-setInterval(function() {
-  if (document.getElementById('audit-auto') && document.getElementById('audit-auto').checked) {
-    refreshAudit();
+// Each poll waits for the previous one to finish before scheduling the next,
+// and skips while the tab is in the background. setInterval kept firing no
+// matter how slow the server was, so a forgotten tab could pile up requests
+// faster than the console could answer them.
+function poll(fn, intervalMs, enabled) {
+  async function tick() {
+    try {
+      if (!document.hidden && (!enabled || enabled())) await fn();
+    } finally {
+      setTimeout(tick, intervalMs);
+    }
   }
-}, 5000);
-setInterval(function() {
-  if (document.getElementById('topo-auto') && document.getElementById('topo-auto').checked) {
-    refreshTopology();
-  }
-}, 10000);
+  setTimeout(tick, intervalMs);
+}
+
+function checked(id) {
+  var el = document.getElementById(id);
+  return !!(el && el.checked);
+}
+
+poll(refreshStatus, 5000);
+poll(refreshAudit, 5000, function() { return checked('audit-auto'); });
+poll(refreshTopology, 10000, function() { return checked('topo-auto'); });

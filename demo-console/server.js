@@ -1,10 +1,10 @@
 const express = require('express');
-const { exec } = require('child_process');
 const path = require('path');
+const { run } = require('./lib/run');
+const { createCache } = require('./lib/cache');
 
 const app = express();
-const PORT = 3000;
-const TIMEOUT = 30000;
+const PORT = process.env.PORT || 3000;
 let DOMAIN = 'apps.example.com';
 const MODULES = {};
 let KIALI_URL = '';
@@ -15,13 +15,35 @@ let MODELS_NS = 'ossm-ai-models';
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-function run(cmd) {
-  return new Promise((resolve) => {
-    exec(cmd, { timeout: TIMEOUT, shell: '/bin/bash' }, (err, stdout, stderr) => {
-      resolve({ output: stdout || stderr || (err ? err.message : ''), exitCode: err ? err.code || 1 : 0 });
-    });
+// Liveness/readiness. Deliberately touches nothing outside the process --
+// /api/health shells out to oc several times and is not a health check.
+app.get('/healthz', (req, res) => res.send('ok'));
+
+// Endpoints the browser polls are served through a shared cache (see lib/cache.js),
+// so their cost no longer scales with the number of open tabs.
+const pollCache = createCache();
+
+function cachedGet(route, ttlMs, handler) {
+  app.get(route, async (req, res) => {
+    try {
+      const body = await pollCache.get(route, ttlMs, () => new Promise((resolve, reject) => {
+        Promise.resolve(handler(req, { json: resolve })).catch(reject);
+      }));
+      res.json(body);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
   });
 }
+
+// Any demo action may change what the status panels show; drop cached status
+// when one starts and again when it finishes, so the next poll is current.
+app.use((req, res, next) => {
+  if (req.method !== 'POST') return next();
+  pollCache.clear();
+  res.on('finish', () => pollCache.clear());
+  next();
+});
 
 async function runCleanYaml(cmd) {
   var result = await run(cmd);
@@ -122,7 +144,7 @@ app.get('/api/domain', (req, res) => {
 
 // --- Topology (Kiali graph API proxy) ---
 
-app.get('/api/topology', async (req, res) => {
+cachedGet('/api/topology', 10000, async (req, res) => {
   const token = await run("oc whoami -t 2>/dev/null");
   const t = token.output.trim().replace(/'/g, '');
   if (!t) {
@@ -181,7 +203,7 @@ app.get('/api/mesh/spiffe', async (req, res) => {
   res.json({ output, exitCode: 0 });
 });
 
-app.get('/api/health', async (req, res) => {
+cachedGet('/api/health', 10000, async (req, res) => {
   const nodes = await run('oc get nodes --no-headers 2>/dev/null');
   const mesh = await run('oc get istio,istiocni,ztunnel -A --no-headers 2>/dev/null');
   const peerAuth = await run('oc get peerauthentication -A --no-headers 2>/dev/null');
@@ -694,7 +716,7 @@ app.post('/api/authz-policy/delete-cross-ns', async (req, res) => {
   res.json(result);
 });
 
-app.get('/api/authz-policy/status', async (req, res) => {
+cachedGet('/api/authz-policy/status', 5000, async (req, res) => {
   const result = await run('oc get authorizationpolicy -A --no-headers 2>/dev/null');
   const active = result.output.trim().length > 0 && result.exitCode === 0;
   res.json({ active, output: result.output || 'No AuthorizationPolicy applied' });
@@ -833,7 +855,7 @@ fi`);
   res.json(result);
 });
 
-app.get('/api/audit', async (req, res) => {
+cachedGet('/api/audit', 5000, async (req, res) => {
   const logsResult = await run("oc logs -n ztunnel -l app=ztunnel --since=5m 2>/dev/null | grep access | grep -v prometheus | grep -v metrics | grep -v openshift-user-workload | grep -v mesh-logger | grep -v mesh-pinger | tail -15");
   const lines = logsResult.output.trim().split('\n').filter(function(l) { return l.trim(); });
   var output = '';
@@ -865,7 +887,7 @@ app.get('/api/audit', async (req, res) => {
 
 // --- Traffic Management ---
 
-app.get('/api/traffic-policy/status', async (req, res) => {
+cachedGet('/api/traffic-policy/status', 5000, async (req, res) => {
   const hrCheck = await run('oc get httproute httpbin-timeout -n ossm-httpbin --no-headers 2>/dev/null');
   const active = hrCheck.output.trim().length > 0 && hrCheck.exitCode === 0;
   if (!active) {
@@ -1340,7 +1362,7 @@ echo 'HTTPRoute recreated. The gateway can route traffic again.'`);
   res.json(result);
 });
 
-app.get('/api/httproutes/parents', async (req, res) => {
+cachedGet('/api/httproutes/parents', 10000, async (req, res) => {
   const result = await run("oc get httproute -A -o jsonpath='{range .items[*]}{.spec.parentRefs[0].kind}/{.spec.parentRefs[0].name}@{.metadata.namespace}{\"\\n\"}{end}' 2>/dev/null");
   var parents = {};
   result.output.replace(/'/g, '').trim().split('\n').forEach(function(line) {
@@ -1423,7 +1445,7 @@ app.get('/api/kiali-url', async (req, res) => {
 
 // --- Startup ---
 
-exec("oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}' 2>/dev/null", (err, stdout) => {
+run("oc get ingress.config.openshift.io cluster -o jsonpath='{.spec.domain}' 2>/dev/null").then(({ output: stdout }) => {
   if (stdout && stdout.trim()) DOMAIN = stdout.trim().replace(/'/g, '');
   console.log(`Cluster domain: ${DOMAIN}`);
 

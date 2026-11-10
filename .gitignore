@@ -1,3 +1,10 @@
 *demo-token.txt
 *jwks.json
 .DS_Store
+
+# Claude Code personal settings (not for a public repo)
+.claude/settings.local.json
+
+# Deck build artifacts
+docs/deck-build/node_modules/
+docs/deck-build/*.pptx
