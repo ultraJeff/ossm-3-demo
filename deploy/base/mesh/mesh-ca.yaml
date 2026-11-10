@@ -2,9 +2,14 @@
 #
 #   mesh-selfsigned (ClusterIssuer)
 #     └─ Mesh Root CA          (mesh-root-ca-secret)
-#          └─ Mesh Intermediate CA  → istiod's signing CA for workload
-#                                     certificates, and the issuer for the
-#                                     AI models gateway certificate
+#          └─ Mesh Intermediate CA  (cacerts) → istiod's signing CA for
+#                                     workload certificates, and the issuer
+#                                     for the AI models gateway certificate
+#
+# cert-manager writes the intermediate CA straight into istio-system/cacerts,
+# the secret istiod loads its plugged-in CA from. istiod reads cert-manager's
+# tls.crt / tls.key / ca.crt keys directly and watches the secret, so a
+# renewed intermediate reaches istiod without copying anything.
 #
 # In a real deployment the root CA would come from the customer's PKI
 # team. Here cert-manager's self-signed issuer acts as the root.
@@ -62,7 +67,7 @@ spec:
   subject:
     organizations:
       - tallgeese.ultra.lab
-  secretName: mesh-intermediate-ca-secret
+  secretName: cacerts
   privateKey:
     algorithm: ECDSA
     size: 256
@@ -77,4 +82,4 @@ metadata:
   namespace: istio-system
 spec:
   ca:
-    secretName: mesh-intermediate-ca-secret
+    secretName: cacerts
