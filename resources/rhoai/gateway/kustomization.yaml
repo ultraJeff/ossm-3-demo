@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# North-south gateway for the AI model endpoints: the Gateway, its
+# ReferenceGrant to the cert-manager secret in istio-system, the
+# HTTPRoutes, and the passthrough OpenShift Routes.
+#
+# Deployed on its own by the ai-models-gateway ArgoCD Application in
+# openshift-bootstrap-gitops. The certificate it serves comes from the
+# service-mesh-with-rhoai repo (manifests/certs).
+resources:
+  - ai-models-gateway.yaml
+  - httproutes.yaml
+  - ocp-routes.yaml
