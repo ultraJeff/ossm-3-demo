@@ -1118,8 +1118,14 @@ if [ -z "$GATEWAY" ]; then
   echo 'restapi-gateway has no address.'
   exit 1
 fi
-# Istio's test JWT token (issuer: testing@secure.istio.io)
-TOKEN="eyJhbGciOiJSUzI1NiIsImtpZCI6IkRIRmJwb0lVcXJZOHQyenBBMnFYZkNtcjVWTzVaRXI0UnpIVV8tZW52dlEiLCJ0eXAiOiJKV1QifQ.eyJleHAiOjQ2ODU5ODk3MDAsImlhdCI6MTUzMjM4OTcwMCwiaXNzIjoidGVzdGluZ0BzZWN1cmUuaXN0aW8uaW8iLCJzdWIiOiJ0ZXN0aW5nQHNlY3VyZS5pc3Rpby5pbyJ9.CfNnDjMBWtYs3fhKPT1RSZhBwsvHzNaRFGtd0LH_5Ig6ECkGXj2YoU8Bpo1UcPVUBDiGJMwyYYMGm7KT7nBHQ-K2rBng0Av-v0EoeemRW_KhZ8BFQX5Yh0DE6L1h4KP0J1Hhqkk3Gj3jlINf4mJB3XSaGdQaI2FrQLYqRCUzXS_R05-AwC43AbGjWJB-nSEh57E-MC_37XPix0cUr12RXVNPmVOtlQQfFzJL45Best1HwrplI0J-ZFKR3EvH7ZPQajg2EPFSALJgXOQf7KaHEjSdrb6G5St3SA9d3M-y9LDzKqOdNC4iMrBYS0bfXMBPOAx7e5OkkhsFtCvnTCkGE0w"
+# Istio's published sample JWT (issuer: testing@secure.istio.io), fetched at
+# run time from the same Istio release as the jwksUri in demo-jwt-auth so the
+# token and the signing key always match. Don't paste a token into this file.
+TOKEN=$(curl -sf --max-time 10 https://raw.githubusercontent.com/istio/istio/release-1.24/security/tools/jwt/samples/demo.jwt | tr -d '\\n')
+if [ -z "$TOKEN" ]; then
+  echo "Couldn't download Istio's sample JWT (no internet access from the console pod?)."
+  exit 1
+fi
 echo '$ curl -H "Authorization: Bearer <istio-test-jwt>" http://$GATEWAY/hello'
 echo ''
 CODE=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 -H "Authorization: Bearer $TOKEN" "http://$GATEWAY/hello" 2>/dev/null)
