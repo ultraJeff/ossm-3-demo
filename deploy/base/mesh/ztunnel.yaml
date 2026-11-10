@@ -6,4 +6,4 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   namespace: ztunnel
-  version: v1.28.8
+  version: v1.31.1
