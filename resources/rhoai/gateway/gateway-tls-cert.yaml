@@ -1,0 +1,29 @@
+# TLS certificate for the AI models gateway's external-facing listener.
+# Issued by the mesh intermediate CA (deploy/base/mesh/mesh-ca.yaml), so
+# clients that trust the mesh root CA can verify the chain.
+#
+# Served by istio-ingress/ai-models-gateway (ai-models-gateway.yaml in this
+# directory), which reads this secret across namespaces through the
+# ReferenceGrant there. Don't copy the secret into istio-ingress:
+# cert-manager only renews the secret it owns.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mesh-gateway-cert
+  namespace: istio-system
+spec:
+  secretName: mesh-gateway-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: "mesh-gateway.apps.tallgeese.ultra.lab"
+  dnsNames:
+    - "iris-onnx.apps.tallgeese.ultra.lab"
+    - "phi-4-mini.apps.tallgeese.ultra.lab"
+    - "mesh-gateway.apps.tallgeese.ultra.lab"
+    - "phi4-mesh.apps.tallgeese.ultra.lab"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: mesh-intermediate-ca-issuer
+    kind: Issuer

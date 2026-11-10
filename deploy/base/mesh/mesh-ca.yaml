@@ -1,0 +1,80 @@
+# Mesh CA chain, managed by cert-manager.
+#
+#   mesh-selfsigned (ClusterIssuer)
+#     └─ Mesh Root CA          (mesh-root-ca-secret)
+#          └─ Mesh Intermediate CA  → istiod's signing CA for workload
+#                                     certificates, and the issuer for the
+#                                     AI models gateway certificate
+#
+# In a real deployment the root CA would come from the customer's PKI
+# team. Here cert-manager's self-signed issuer acts as the root.
+#
+# Changing the subject or keys of these Certificates reissues the CA.
+# Treat that as a planned CA rotation, not a routine change.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: mesh-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mesh-root-ca
+  namespace: istio-system
+spec:
+  isCA: true
+  duration: 87600h # 10 years
+  renewBefore: 8760h
+  commonName: "Mesh Root CA"
+  subject:
+    organizations:
+      - tallgeese.ultra.lab
+  secretName: mesh-root-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: mesh-selfsigned
+    kind: ClusterIssuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: mesh-root-ca-issuer
+  namespace: istio-system
+spec:
+  ca:
+    secretName: mesh-root-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: mesh-intermediate-ca
+  namespace: istio-system
+spec:
+  isCA: true
+  duration: 43800h # 5 years
+  renewBefore: 8760h
+  commonName: "Mesh Intermediate CA"
+  subject:
+    organizations:
+      - tallgeese.ultra.lab
+  secretName: mesh-intermediate-ca-secret
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: mesh-root-ca-issuer
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: mesh-intermediate-ca-issuer
+  namespace: istio-system
+spec:
+  ca:
+    secretName: mesh-intermediate-ca-secret

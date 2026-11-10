@@ -9,3 +9,4 @@ resources:
 - istiocni.yaml
 - ztunnel.yaml
 - istio-telemetry.yaml
+- mesh-ca.yaml
