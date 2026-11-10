@@ -1,0 +1,45 @@
+# North-south gateway for the AI model endpoints (iris-onnx, phi4-mesh).
+#
+# TLS uses the cert-manager secret istio-system/mesh-gateway-tls, issued by
+# the mesh intermediate CA (Certificate mesh-gateway-cert, defined in the
+# service-mesh-with-rhoai repo). The Gateway references it across namespaces,
+# which Gateway API only allows with the ReferenceGrant below.
+#
+# Don't copy the secret into istio-ingress instead: cert-manager only renews
+# the secret it owns, so a copy keeps the old certificate and expires.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ai-models-gateway
+  namespace: istio-ingress
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: mesh-gateway-tls
+            namespace: istio-system
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: ai-models-gateway-tls
+  namespace: istio-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: istio-ingress
+  to:
+    - group: ""
+      kind: Secret
+      name: mesh-gateway-tls

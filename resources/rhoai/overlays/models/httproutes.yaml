@@ -10,7 +10,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: ai-models-gateway
-      namespace: istio-system
+      namespace: istio-ingress
   rules:
     - backendRefs:
         - group: ""
@@ -35,7 +35,7 @@ spec:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: ai-models-gateway
-      namespace: istio-system
+      namespace: istio-ingress
   rules:
     - backendRefs:
         - group: ""

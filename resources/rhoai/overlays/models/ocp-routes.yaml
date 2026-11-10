@@ -2,7 +2,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: ai-models-gateway-iris
-  namespace: istio-system
+  namespace: istio-ingress
 spec:
   host: iris-onnx.apps.tallgeese.ultra.lab
   port:
@@ -17,7 +17,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: ai-models-gateway-phi4
-  namespace: istio-system
+  namespace: istio-ingress
 spec:
   host: phi4-mesh.apps.tallgeese.ultra.lab
   port:

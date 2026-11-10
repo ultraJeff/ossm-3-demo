@@ -10,5 +10,6 @@ resources:
   - vllm-serving-runtime.yaml
   - iris-inference-service.yaml
   - phi4-inference-service.yaml
+  - ai-models-gateway.yaml
   - httproutes.yaml
   - ocp-routes.yaml
