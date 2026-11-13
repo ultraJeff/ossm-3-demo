@@ -3,7 +3,8 @@ kind: Kustomization
 
 # North-south gateway for the AI model endpoints: the Gateway, its
 # ReferenceGrant to the cert-manager secret in istio-system, the
-# HTTPRoutes, the passthrough OpenShift Routes, and the TLS Certificate.
+# HTTPRoutes, the passthrough OpenShift Routes, the TLS Certificate, and the
+# Connectivity Link (RHCL) auth and rate limit policies.
 #
 # Deployed on its own by the ai-models-gateway ArgoCD Application in
 # openshift-bootstrap-gitops. The Certificate is issued by the mesh CA in
@@ -13,3 +14,4 @@ resources:
   - httproutes.yaml
   - ocp-routes.yaml
   - gateway-tls-cert.yaml
+  - rhcl-policies.yaml

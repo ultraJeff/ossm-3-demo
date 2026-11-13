@@ -1,0 +1,95 @@
+# Red Hat Connectivity Link policies for the AI models gateway.
+#
+# API key auth and request rate limiting on iris-onnx, enforced at the
+# mesh's north-south gateway by Authorino and Limitador. The Kuadrant CR
+# and the RHCL operators are managed outside this repo (kuadrant-system and
+# openshift-connectivity-link).
+#
+# API keys are Secrets in kuadrant-system labeled
+# app.kubernetes.io/part-of=ai-models-gateway. They are created by hand and
+# not kept in git. Callers send "Authorization: APIKEY <key>".
+---
+# Authorino's gRPC listener on this cluster serves TLS (enabled for RHOAI
+# MaaS), but the kuadrant-auth-service cluster that Kuadrant generates is
+# plaintext, which turns every auth check into a 500. This adds TLS to that
+# cluster, trusting the OpenShift service CA, the same way
+# odh-model-controller patches maas-default-gateway
+# (openshift-ingress/maas-default-gateway-authn-ssl).
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: ai-models-gateway-authn-ssl
+  namespace: istio-ingress
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ai-models-gateway
+  priority: -1
+  configPatches:
+    - applyTo: CLUSTER
+      match:
+        cluster:
+          service: authorino-authorino-authorization.kuadrant-system.svc.cluster.local
+      patch:
+        operation: ADD
+        value:
+          name: kuadrant-auth-service
+          type: STRICT_DNS
+          connect_timeout: 1s
+          lb_policy: ROUND_ROBIN
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: kuadrant-auth-service
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: authorino-authorino-authorization.kuadrant-system.svc.cluster.local
+                          port_value: 50051
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+              common_tls_context:
+                validation_context:
+                  trusted_ca:
+                    filename: /var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: iris-onnx-api-key
+  namespace: ossm-ai-models
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: iris-onnx-route
+  rules:
+    authentication:
+      api-key:
+        apiKey:
+          selector:
+            matchLabels:
+              app.kubernetes.io/part-of: ai-models-gateway
+        credentials:
+          authorizationHeader:
+            prefix: APIKEY
+---
+apiVersion: kuadrant.io/v1
+kind: RateLimitPolicy
+metadata:
+  name: iris-onnx-rate-limit
+  namespace: ossm-ai-models
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: iris-onnx-route
+  limits:
+    per-route:
+      rates:
+        - limit: 5
+          window: 10s
